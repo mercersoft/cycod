@@ -32,6 +32,10 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const terminalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isResizingRef = useRef<boolean>(false);
+  const startYRef = useRef<number>(0);
+  const startHeightRef = useRef<number>(0);
+  const [containerHeightPx, setContainerHeightPx] = useState<number>(384); // ~ h-96
 
   // Auto-scroll to bottom when new content is added
   useEffect(() => {
@@ -46,6 +50,38 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
       inputRef.current.focus();
     }
   };
+
+  // Resize handlers (vertical only)
+  const onResizerMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    isResizingRef.current = true;
+    startYRef.current = e.clientY;
+    startHeightRef.current = containerHeightPx;
+    document.addEventListener('mousemove', onResizerMouseMove);
+    document.addEventListener('mouseup', onResizerMouseUp);
+    e.preventDefault();
+  };
+
+  const onResizerMouseMove = (e: MouseEvent) => {
+    if (!isResizingRef.current) return;
+    const deltaY = e.clientY - startYRef.current;
+    const next = Math.max(240, Math.min(900, startHeightRef.current + deltaY));
+    setContainerHeightPx(next);
+  };
+
+  const onResizerMouseUp = () => {
+    if (!isResizingRef.current) return;
+    isResizingRef.current = false;
+    document.removeEventListener('mousemove', onResizerMouseMove);
+    document.removeEventListener('mouseup', onResizerMouseUp);
+  };
+
+  // Cleanup in case component unmounts during resize
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', onResizerMouseMove);
+      document.removeEventListener('mouseup', onResizerMouseUp);
+    };
+  }, []);
 
   // Handle command submission
   const handleSubmit = () => {
@@ -177,7 +213,8 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
       <CardContent 
         ref={terminalRef}
         onClick={handleTerminalClick}
-        className="p-4 font-['SF_Mono','Monaco','Courier_New',monospace] text-sm h-96 overflow-y-auto bg-black cursor-text"
+        className="p-4 font-['SF_Mono','Monaco','Courier_New',monospace] text-sm overflow-y-auto bg-black cursor-text"
+        style={{ height: `${containerHeightPx}px` }}
       >
         {/* Welcome message */}
         {history.length === 0 && !isProcessing && (
@@ -261,6 +298,16 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
           </div>
         )}
       </CardContent>
+      {/* Vertical resize handle */}
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        onMouseDown={onResizerMouseDown}
+        className="h-3 bg-gray-800/60 hover:bg-gray-700/70 border-t border-gray-700 cursor-ns-resize select-none flex items-center justify-center"
+        title="Drag to resize"
+      >
+        <div className="w-10 h-0.5 bg-gray-500 rounded-full" />
+      </div>
     </Card>
   );
 };
