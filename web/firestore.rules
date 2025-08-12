@@ -7,6 +7,25 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.email == 'philipp.h.schmid@gmail.com';
     }
 
+    // auth: anyone can create with strict schema; only owner can read/update/delete
+    match /auth/{docId} {
+      allow create: if
+        request.resource.data.keys().hasOnly(["createdAt", "email", "action", "env"]) &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.email is string &&
+        request.resource.data.action is string &&
+        request.resource.data.env is string;
+
+      allow read: if isOwner();
+
+      allow update, delete: if isOwner() &&
+        request.resource.data.keys().hasOnly(["createdAt", "email", "action", "env"]) &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.email is string &&
+        request.resource.data.action is string &&
+        request.resource.data.env is string;
+    }
+
     // theMovement: anyone can create with strict schema; only owner can read/update/delete
     match /theMovement/{docId} {
       allow create: if

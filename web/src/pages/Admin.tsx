@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { getFirebaseApp } from "@/lib/firebase"
 import ErrorPage from "./ErrorPage"
 import SignupTable from "@/components/SignupTable"
+import AuthTable from "@/components/AuthTable"
 
 export default function Admin() {
   const [user, setUser] = useState<User | null>(null)
@@ -80,9 +81,8 @@ export default function Admin() {
               })}
             </div>
             <div className="mt-8">
-              {activeTab === "signup" && (
-                <SignupTable />
-              )}
+              {activeTab === "signup" && <SignupTable />}
+              {activeTab === "logins" && <AuthTable />}
             </div>
           </div>
         </div>

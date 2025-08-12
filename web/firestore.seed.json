@@ -1,5 +1,13 @@
 {
   "collections": {
+    "auth": {
+      "example": {
+        "createdAt": { "_serverTimestamp": true },
+        "email": "sample@example.com",
+        "action": "login",
+        "env": "Mac"
+      }
+    },
     "theMovement": {
       "example": {
         "signup": { "_serverTimestamp": true },

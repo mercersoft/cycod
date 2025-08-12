@@ -26,18 +26,13 @@ function App() {
   }, [])
 
   function detectOsEnv(): string {
-    // userAgentData is non-standardly typed, so cast only this property
     const navAny = navigator as unknown as { userAgentData?: { platform?: string } }
-    const uaData = navAny.userAgentData
-    if (uaData && uaData.platform) return String(uaData.platform)
-    const p = navigator.platform || ""
-    if (p) return p
-    const ua = navigator.userAgent || ""
-    if (/Windows/i.test(ua)) return "Windows"
-    if (/Mac OS X/i.test(ua)) return "Mac"
-    if (/Android/i.test(ua)) return "Android"
-    if (/(iPhone|iPad|iPod)/i.test(ua)) return "iOS"
-    if (/Linux/i.test(ua)) return "Linux"
+    const source = (navAny.userAgentData?.platform || navigator.platform || navigator.userAgent || "").toLowerCase()
+    if (source.includes("win")) return "Windows"
+    if (source.includes("mac")) return "macOS"
+    if (source.includes("iphone") || source.includes("ipad") || source.includes("ipod") || source.includes("ios")) return "iOS"
+    if (source.includes("android")) return "Android"
+    if (source.includes("linux")) return "Linux"
     return "Unknown"
   }
 

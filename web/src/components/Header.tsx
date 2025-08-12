@@ -15,7 +15,7 @@ function Logo() {
 import { useEffect, useState } from "react"
 import InstallModal from "./InstallModal"
 import SignInModal from "./SignInModal"
-import { getFirebaseApp } from "@/lib/firebase"
+import { getFirebaseApp, signOutAndLog } from "@/lib/firebase"
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth"
 import { Link } from "react-router-dom"
 
@@ -96,11 +96,7 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={async () => {
-                      try {
-                        await signOut(getAuth(getFirebaseApp()))
-                      } catch (err) {
-                        console.error("Sign out failed", err)
-                      }
+                      await signOutAndLog()
                     }}
                     className="rounded-lg border border-white/25 bg-white/5 px-4 py-2 text-sm text-white/90 shadow-sm backdrop-blur-md transition hover:bg-white/10 hover:text-white"
                   >

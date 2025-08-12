@@ -15,17 +15,16 @@ import {
   type QueryDocumentSnapshot,
 } from "firebase/firestore"
 
-type SignupRow = {
+type AuthRow = {
   id: string
   email: string
+  action: string
+  createdAt: Date
   env?: string
-  signup: Date
 }
 
-// Date filters removed for now
-
-export default function SignupTable() {
-  const [rows, setRows] = useState<SignupRow[]>([])
+export default function AuthTable() {
+  const [rows, setRows] = useState<AuthRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,9 +33,7 @@ export default function SignupTable() {
   const pageCursorsRef = useRef<Array<QueryDocumentSnapshot<DocumentData> | null>>([null])
   const [hasNextPage, setHasNextPage] = useState(false)
 
-  // Date filters removed for now
-
-  // Summary counts (over the entire collection)
+  // Summary counts (over entire collection)
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [summaryError, setSummaryError] = useState<string | null>(null)
   const [totalCount, setTotalCount] = useState<number>(0)
@@ -44,6 +41,7 @@ export default function SignupTable() {
   const [windowsCount, setWindowsCount] = useState<number>(0)
   const [macCount, setMacCount] = useState<number>(0)
   const othersCount = useMemo(() => Math.max(0, totalCount - windowsCount - macCount), [totalCount, windowsCount, macCount])
+
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount, pageSize])
 
   const fetchPage = useCallback(async (requestedPageIndex: number) => {
@@ -52,10 +50,10 @@ export default function SignupTable() {
     try {
       const app = getFirebaseApp()
       const db = getFirestore(app)
-      const baseRef = collection(db, "theMovement")
+      const baseRef = collection(db, "auth")
 
       const constraints: any[] = []
-      constraints.push(orderBy("signup", "desc"))
+      constraints.push(orderBy("createdAt", "desc"))
 
       const cursor = pageCursorsRef.current[requestedPageIndex]
       if (requestedPageIndex > 0 && cursor) {
@@ -67,13 +65,14 @@ export default function SignupTable() {
       const snap = await getDocs(q)
 
       const docs = snap.docs
-      const mapped: SignupRow[] = docs.map((d) => {
-        const data = d.data() as { email?: string; env?: string; signup?: Timestamp }
+      const mapped: AuthRow[] = docs.map((d) => {
+        const data = d.data() as { email?: string; action?: string; createdAt?: Timestamp; env?: string }
         return {
           id: d.id,
           email: data.email ?? "",
+          action: data.action ?? "",
+          createdAt: (data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(0)),
           env: data.env,
-          signup: (data.signup instanceof Timestamp ? data.signup.toDate() : new Date(0)),
         }
       })
 
@@ -88,7 +87,7 @@ export default function SignupTable() {
 
       setPageIndex(requestedPageIndex)
     } catch (e: any) {
-      setError(e?.message || "Failed to load signups")
+      setError(e?.message || "Failed to load auth events")
     } finally {
       setLoading(false)
     }
@@ -109,17 +108,25 @@ export default function SignupTable() {
       try {
         const app = getFirebaseApp()
         const db = getFirestore(app)
-        const baseRef = collection(db, "theMovement")
+        const baseRef = collection(db, "auth")
 
         const sevenDaysAgo = new Date()
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
         const [totalSnap, last7Snap, winSnap, macSnap] = await Promise.all([
-          getCountFromServer(query(baseRef)),
-          getCountFromServer(query(baseRef, where("signup", ">=", Timestamp.fromDate(sevenDaysAgo)))),
-          getCountFromServer(query(baseRef, where("env", "==", "Windows"))),
-          getCountFromServer(query(baseRef, where("env", "==", "macOS"))),
+          getCountFromServer(query(baseRef, where("action", "==", "signin"))),
+          getCountFromServer(query(baseRef, where("action", "==", "signin"), where("createdAt", ">=", Timestamp.fromDate(sevenDaysAgo)))),
+          // Windows sign-ins only
+          getCountFromServer(query(baseRef, where("action", "==", "signin"), where("env", "==", "Windows"))),
+          // macOS sign-ins only
+          getCountFromServer(query(baseRef, where("action", "==", "signin"), where("env", "==", "macOS"))),
         ])
+
+        console.log("Stats for Logins:")
+        console.log("totalSnap", totalSnap.data().count)
+        console.log("last7Snap", last7Snap.data().count)
+        console.log("winSnap", winSnap.data().count)
+        console.log("macSnap", macSnap.data().count)
 
         setTotalCount(totalSnap.data().count)
         setLast7Count(last7Snap.data().count)
@@ -164,38 +171,38 @@ export default function SignupTable() {
         <div className="text-red-400 text-sm">{summaryError}</div>
       )}
 
-      {/* Date filters removed for now */}
-
       <div className="overflow-x-auto rounded border border-gray-800">
         <table className="min-w-full text-left text-sm text-gray-300">
           <thead className="bg-gray-800 text-gray-200 font-mono text-xs uppercase">
             <tr>
-              <th className="px-3 py-2">Signup</th>
+              <th className="px-3 py-2">Created</th>
               <th className="px-3 py-2">Email</th>
+              <th className="px-3 py-2">Action</th>
               <th className="px-3 py-2">Env</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={3} className="px-3 py-4 text-center text-gray-400">Loading…</td>
+                <td colSpan={4} className="px-3 py-4 text-center text-gray-400">Loading…</td>
               </tr>
             )}
             {error && !loading && (
               <tr>
-                <td colSpan={3} className="px-3 py-4 text-center text-red-400">{error}</td>
+                <td colSpan={4} className="px-3 py-4 text-center text-red-400">{error}</td>
               </tr>
             )}
             {!loading && !error && rows.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-3 py-4 text-center text-gray-400">No results</td>
+                <td colSpan={4} className="px-3 py-4 text-center text-gray-400">No results</td>
               </tr>
             )}
             {!loading && !error && rows.map((r) => (
               <tr key={r.id} className="border-t border-gray-800">
-                <td className="px-3 py-2 whitespace-nowrap">{r.signup.toLocaleString()}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{r.createdAt.toLocaleString()}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{r.email}</td>
-                <td className="px-3 py-2">{r.env || ""}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{r.action}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{r.env ?? ""}</td>
               </tr>
             ))}
           </tbody>
