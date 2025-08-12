@@ -173,13 +173,59 @@ function App() {
         </div>
       </section>
 
-      <footer className="py-12 px-4 border-t border-gray-800 text-center text-white">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-center space-x-3 mb-4">
-            <Terminal className="w-6 h-6 text-green-400" />
-            <span className="font-mono text-lg">CycoDev</span>
+      <footer className="py-16 px-4 border-t border-gray-800 text-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+              <h4 className="text-lg font-mono mb-4">Product</h4>
+              <ul className="space-y-3 text-gray-300">
+                <li><a href="#" className="hover:text-white transition-colors">Agent</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Chat</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Next Edit</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Completions</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Slack</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-mono mb-4">Resources</h4>
+              <ul className="space-y-3 text-gray-300">
+                <li><a href="#" className="hover:text-white transition-colors">Docs</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">MCP Servers</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Changelog</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Privacy & Security</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Trust Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Status Page</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Guides</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-mono mb-4">Company</h4>
+              <ul className="space-y-3 text-gray-300">
+                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Press Inquiries</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact Sales</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact Support</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-mono mb-4">Legal</h4>
+              <ul className="space-y-3 text-gray-300">
+                <li><a href="#" className="hover:text-white transition-colors">Cookie Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+              </ul>
+            </div>
           </div>
-          <p className="text-gray-500 text-sm font-mono">cyco.ai • Building the future of developer tools</p>
+          <div className="mt-12 pt-6 border-t border-gray-800 text-center">
+            <div className="flex items-center justify-center gap-3 text-gray-500 text-sm font-mono">
+              <span className="text-gray-400">&gt;_</span>
+              <span className="text-gray-300">Cyco<span className="text-green-400">Dev</span></span>
+              <span>©</span>
+              <span>2025</span>
+            </div>
+          </div>
         </div>
       </footer>
 
