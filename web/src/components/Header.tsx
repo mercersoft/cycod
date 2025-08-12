@@ -35,7 +35,7 @@ export default function Header() {
   }, [])
   
   const baseNavItems = [
-    { label: "Product", href: "/" },
+    { label: "Getting Started", href: "/start" },
     { label: "Docs", href: "/" },
     { label: "Blog", href: "/" },
   ] as const
