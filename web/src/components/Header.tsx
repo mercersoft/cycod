@@ -2,13 +2,13 @@
 
 function Logo() {
   return (
-    <a href="#" className="group inline-flex items-center gap-2 select-none">
+    <Link to="/" className="group inline-flex items-center gap-2 select-none">
       <span className="text-green-500 font-mono text-2xl leading-none">&gt;_</span>
       <span className="text-xl font-semibold tracking-tight">
         <span className="text-white">Cyco</span>
         <span className="text-green-500">Dev</span>
       </span>
-    </a>
+    </Link>
   );
 }
 
@@ -17,6 +17,7 @@ import InstallModal from "./InstallModal"
 import SignInModal from "./SignInModal"
 import { getFirebaseApp } from "@/lib/firebase"
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth"
+import { Link } from "react-router-dom"
 
 export default function Header() {
   const [showInstall, setShowInstall] = useState(false)
@@ -32,6 +33,17 @@ export default function Header() {
     })
     return () => unsub()
   }, [])
+  
+  const baseNavItems = [
+    { label: "Product", href: "/" },
+    { label: "Docs", href: "/" },
+    { label: "Blog", href: "/" },
+  ] as const
+
+  const navItems =
+    currentUser?.email?.toLowerCase() === "philipp.h.schmid@gmail.com"
+      ? [...baseNavItems, { label: "theMovement", href: "/admin" }]
+      : baseNavItems
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-50">
       {/* gradient hairline to blend into background */}
@@ -51,18 +63,11 @@ export default function Header() {
             <div className="relative hidden md:block">
               <div className="pointer-events-none absolute inset-x-0 -bottom-1 mx-2 h-2 rounded-full bg-white/10 blur-lg" />
               <ul className="flex items-center gap-8 text-sm text-white/90">
-                {[
-                  { label: "Product", href: "#product" },
-                  { label: "Docs", href: "#docs" },
-                  { label: "Blog", href: "#blog" },
-                ].map((item) => (
+                {navItems.map((item) => (
                   <li key={item.label}>
-                    <a
-                      href={item.href}
-                      className="relative transition-colors hover:text-white"
-                    >
+                    <Link to={item.href} className="relative transition-colors hover:text-white">
                       {item.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
