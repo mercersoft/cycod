@@ -27,6 +27,7 @@ export default function AuthTable() {
   const [rows, setRows] = useState<AuthRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [includeSignout, setIncludeSignout] = useState(false)
 
   const [pageSize] = useState(20)
   const [pageIndex, setPageIndex] = useState(0)
@@ -42,7 +43,9 @@ export default function AuthTable() {
   const [macCount, setMacCount] = useState<number>(0)
   const othersCount = useMemo(() => Math.max(0, totalCount - windowsCount - macCount), [totalCount, windowsCount, macCount])
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount, pageSize])
+  // Total pages for the table list (may differ from summary total when including signouts)
+  const [listTotalCount, setListTotalCount] = useState<number>(0)
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(listTotalCount / pageSize)), [listTotalCount, pageSize])
 
   const fetchPage = useCallback(async (requestedPageIndex: number) => {
     setLoading(true)
@@ -52,7 +55,10 @@ export default function AuthTable() {
       const db = getFirestore(app)
       const baseRef = collection(db, "auth")
 
-      const constraints: any[] = []
+      const constraints: unknown[] = []
+      if (!includeSignout) {
+        constraints.push(where("action", "==", "signin"))
+      }
       constraints.push(orderBy("createdAt", "desc"))
 
       const cursor = pageCursorsRef.current[requestedPageIndex]
@@ -61,7 +67,7 @@ export default function AuthTable() {
       }
       constraints.push(limit(pageSize))
 
-      const q = query(baseRef, ...constraints)
+      const q = query(baseRef, ...(constraints as Parameters<typeof query>[1][]))
       const snap = await getDocs(q)
 
       const docs = snap.docs
@@ -86,12 +92,13 @@ export default function AuthTable() {
       pageCursorsRef.current = existing
 
       setPageIndex(requestedPageIndex)
-    } catch (e: any) {
-      setError(e?.message || "Failed to load auth events")
+    } catch (e) {
+      const message = (e as Error)?.message ?? "Failed to load auth events"
+      setError(message)
     } finally {
       setLoading(false)
     }
-  }, [pageSize])
+  }, [pageSize, includeSignout])
 
   // Initial load
   useEffect(() => {
@@ -100,7 +107,7 @@ export default function AuthTable() {
     fetchPage(0)
   }, [fetchPage])
 
-  // Fetch summary once on mount
+  // Fetch summary and recompute when filter changes
   useEffect(() => {
     const run = async () => {
       setSummaryLoading(true)
@@ -114,32 +121,55 @@ export default function AuthTable() {
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
         const [totalSnap, last7Snap, winSnap, macSnap] = await Promise.all([
-          getCountFromServer(query(baseRef, where("action", "==", "signin"))),
-          getCountFromServer(query(baseRef, where("action", "==", "signin"), where("createdAt", ">=", Timestamp.fromDate(sevenDaysAgo)))),
-          // Windows sign-ins only
-          getCountFromServer(query(baseRef, where("action", "==", "signin"), where("env", "==", "Windows"))),
-          // macOS sign-ins only
-          getCountFromServer(query(baseRef, where("action", "==", "signin"), where("env", "==", "macOS"))),
+          includeSignout
+            ? getCountFromServer(query(baseRef))
+            : getCountFromServer(query(baseRef, where("action", "==", "signin"))),
+          includeSignout
+            ? getCountFromServer(query(baseRef, where("createdAt", ">=", Timestamp.fromDate(sevenDaysAgo))))
+            : getCountFromServer(query(baseRef, where("action", "==", "signin"), where("createdAt", ">=", Timestamp.fromDate(sevenDaysAgo)))),
+          includeSignout
+            ? getCountFromServer(query(baseRef, where("env", "==", "Windows")))
+            : getCountFromServer(query(baseRef, where("action", "==", "signin"), where("env", "==", "Windows"))),
+          includeSignout
+            ? getCountFromServer(query(baseRef, where("env", "==", "macOS")))
+            : getCountFromServer(query(baseRef, where("action", "==", "signin"), where("env", "==", "macOS"))),
         ])
-
-        console.log("Stats for Logins:")
-        console.log("totalSnap", totalSnap.data().count)
-        console.log("last7Snap", last7Snap.data().count)
-        console.log("winSnap", winSnap.data().count)
-        console.log("macSnap", macSnap.data().count)
 
         setTotalCount(totalSnap.data().count)
         setLast7Count(last7Snap.data().count)
         setWindowsCount(winSnap.data().count)
         setMacCount(macSnap.data().count)
-      } catch (e: any) {
-        setSummaryError(e?.message || "Failed to load summary")
+      } catch (e) {
+        const message = (e as Error)?.message ?? "Failed to load summary"
+        setSummaryError(message)
       } finally {
         setSummaryLoading(false)
       }
     }
     run()
-  }, [])
+  }, [includeSignout])
+
+  // Compute total count for list pagination based on includeSignout toggle
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const app = getFirebaseApp()
+        const db = getFirestore(app)
+        const baseRef = collection(db, "auth")
+        const countSnap = includeSignout
+          ? await getCountFromServer(query(baseRef))
+          : await getCountFromServer(query(baseRef, where("action", "==", "signin")))
+        setListTotalCount(countSnap.data().count)
+      } catch {
+        // ignore pagination count errors
+      }
+    }
+    // Reset pagination when filter changes and refresh first page
+    pageCursorsRef.current = [null]
+    setPageIndex(0)
+    fetchPage(0)
+    run()
+  }, [includeSignout, fetchPage])
 
   return (
     <div className="space-y-4">
@@ -210,7 +240,17 @@ export default function AuthTable() {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="text-xs text-gray-400 font-mono">Page {pageIndex + 1} of {totalPages}</div>
+        <div className="text-xs text-gray-400 font-mono flex items-center gap-4">
+          <span>Page {pageIndex + 1} of {totalPages}</span>
+          <label className="inline-flex items-center gap-2 select-none cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeSignout}
+              onChange={(e) => setIncludeSignout(e.target.checked)}
+            />
+            <span>include sign out action</span>
+          </label>
+        </div>
         <div className="flex gap-2">
           <button
             type="button"
