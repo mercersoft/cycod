@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ChevronDown, Terminal, Smartphone, Mic, GitBranch, Users, Zap } from "lucide-react"
 import StarfieldBackground from "./components/StarfieldBackground"
 import Header from "./components/Header"
+import { getFirebaseApp } from "@/lib/firebase"
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore"
 
 function App() {
   const [email, setEmail] = useState("")
-  const [submitted, setSubmitted] = useState(false)
+  const [showThanks, setShowThanks] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [typed, setTyped] = useState("")
   const headline = "It's a toolset, a mindset, a culture, and a movement."
 
@@ -22,10 +25,48 @@ function App() {
     return () => clearInterval(id)
   }, [])
 
-  const onSubmit = (e: React.FormEvent) => {
+  function detectOsEnv(): string {
+    // userAgentData is non-standardly typed, so cast only this property
+    const navAny = navigator as unknown as { userAgentData?: { platform?: string } }
+    const uaData = navAny.userAgentData
+    if (uaData && uaData.platform) return String(uaData.platform)
+    const p = navigator.platform || ""
+    if (p) return p
+    const ua = navigator.userAgent || ""
+    if (/Windows/i.test(ua)) return "Windows"
+    if (/Mac OS X/i.test(ua)) return "Mac"
+    if (/Android/i.test(ua)) return "Android"
+    if (/(iPhone|iPad|iPod)/i.test(ua)) return "iOS"
+    if (/Linux/i.test(ua)) return "Linux"
+    return "Unknown"
+  }
+
+  const isValidEmail = useMemo(() => {
+    if (!email) return false
+    // Simple, robust email regex for client-side gating
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }, [email])
+
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
-    setSubmitted(true)
+    if (!isValidEmail || submitting) return
+    try {
+      setSubmitting(true)
+      const app = getFirebaseApp()
+      const db = getFirestore(app)
+      const env = detectOsEnv()
+      await addDoc(collection(db, "theMovement"), {
+        signup: serverTimestamp(),
+        email,
+        env,
+      })
+      setShowThanks(true)
+    } catch (err) {
+      console.error("Failed to submit join:", err)
+      alert("Sorry, something went wrong. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -157,21 +198,49 @@ function App() {
           <Users className="w-16 h-16 text-green-400 mx-auto mb-8" />
           <h3 className="text-3xl md:text-4xl font-mono mb-6">Join the Movement</h3>
           <p className="text-lg text-gray-300 mb-8">Community-first, open source roots. Be among the first to shape the future of development tools.</p>
-          {submitted ? (
-            <div className="bg-gray-900/80 rounded-lg p-6 border border-green-400 max-w-md mx-auto">
-              <div className="text-green-400 font-mono mb-2">✓ Subscribed</div>
-              <p className="text-gray-300">You're in! We'll be in touch soon.</p>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="developer@example.com"
+                required
+                className="flex-1 px-4 py-3 bg-gray-900/80 border border-gray-700 rounded-lg focus:border-green-400 focus:outline-none font-mono"
+              />
+              <button
+                type="submit"
+                disabled={!isValidEmail || submitting}
+                className="px-6 py-3 bg-green-400 text-black font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-300 transform hover:scale-105"
+              >
+                {submitting ? "Joining..." : "Join"}
+              </button>
             </div>
-          ) : (
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="developer@example.com" required className="flex-1 px-4 py-3 bg-gray-900/80 border border-gray-700 rounded-lg focus:border-green-400 focus:outline-none font-mono" />
-                <button type="submit" className="px-6 py-3 bg-green-400 text-black font-semibold rounded-lg hover:bg-green-300 transition-all duration-300 transform hover:scale-105">Join</button>
-              </div>
-            </form>
-          )}
+          </form>
         </div>
       </section>
+
+      {/* Thank-you modal */}
+      {showThanks && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4">
+          <div className="max-w-md w-full rounded-xl border border-white/15 bg-gray-900/95 p-6 text-white shadow-xl">
+            <h4 className="font-mono text-lg mb-2 text-green-400">Thank you!</h4>
+            <p className="text-gray-200 mb-6">Thank you for your interest in CycoDev. We will email you with future updates!</p>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowThanks(false)
+                  setEmail("")
+                }}
+                className="rounded-lg border border-white/25 bg-white/5 px-4 py-2 text-sm text-white/90 shadow-sm backdrop-blur-md transition hover:bg-white/10 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="py-16 px-4 border-t border-gray-800 text-white">
         <div className="max-w-6xl mx-auto">

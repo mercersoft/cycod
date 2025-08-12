@@ -1,0 +1,32 @@
+{
+  "collections": {
+    "theMovement": {
+      "example": {
+        "signup": { "_serverTimestamp": true },
+        "email": "sample@example.com",
+        "env": "dev"
+      }
+    },
+    "users": {
+      "demo-user": {
+        "displayName": "Demo User",
+        "email": "demo@example.com",
+        "createdAt": { "_serverTimestamp": true }
+      }
+    },
+    "projects": {
+      "demo-project": {
+        "name": "Demo Project",
+        "ownerId": "demo-user",
+        "updatedAt": { "_serverTimestamp": true },
+        "subcollections": {
+          "tasks": {
+            "task-1": { "title": "First task", "status": "todo", "projectId": "demo-project" },
+            "task-2": { "title": "Second task", "status": "done", "projectId": "demo-project" }
+          }
+        }
+      }
+    }
+  }
+}
+
