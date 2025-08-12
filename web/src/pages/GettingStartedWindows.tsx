@@ -13,11 +13,17 @@ export default function GettingStartedWindows() {
           title="Windows PowerShell"
           commands={[
             {
-              command: "winget install --id Git.Git -e",
+              command: "winget install --cask dotnet-sdk",
               output: [
-                "Found Git [Git.Git]",
-                "This application is licensed to you by its owner.",
+                "Found dotnet-sdk [Microsoft.dotnet-sdk]",
                 "Successfully installed",
+              ],
+            },
+            {
+              command: "dotnet tool install --global cycod --prerelease",
+              output: [
+                "You can invoke the tool using the following command: cycod",
+                "Tool 'cycod' (version '1.x.x') was successfully installed.",
               ],
             },
             {
