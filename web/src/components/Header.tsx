@@ -36,6 +36,7 @@ export default function Header() {
   
   const baseNavItems = [
     { label: "Getting Started", href: "/start" },
+    { label: "Try it Live!", href: "/live" },
     { label: "Docs", href: "/" },
     { label: "Blog", href: "/" },
   ] as const
@@ -67,6 +68,11 @@ export default function Header() {
                   <li key={item.label}>
                     <Link to={item.href} className="relative transition-colors hover:text-white">
                       {item.label}
+                      {item.label === "Try it Live!" && (
+                        <span className="ml-2 inline-block -top-1 relative rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 shadow-sm">
+                          NEW
+                        </span>
+                      )}
                     </Link>
                   </li>
                 ))}
