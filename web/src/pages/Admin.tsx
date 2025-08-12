@@ -4,6 +4,7 @@ import { getAuth, onAuthStateChanged, type User } from "firebase/auth"
 import { useEffect, useState } from "react"
 import { getFirebaseApp } from "@/lib/firebase"
 import ErrorPage from "./ErrorPage"
+import SignupTable from "@/components/SignupTable"
 
 export default function Admin() {
   const [user, setUser] = useState<User | null>(null)
@@ -77,6 +78,11 @@ export default function Admin() {
                   </button>
                 )
               })}
+            </div>
+            <div className="mt-8">
+              {activeTab === "signup" && (
+                <SignupTable />
+              )}
             </div>
           </div>
         </div>

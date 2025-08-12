@@ -56,4 +56,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Ensure date picker icon is visible on dark backgrounds */
+  /* Hide native indicator so our white icon shows consistently */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0; /* keep clickable space but hide icon */
+  }
 }
