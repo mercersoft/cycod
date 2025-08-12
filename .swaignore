@@ -1,0 +1,7 @@
+# Ignore everything by default and selectively include the built site
+/*
+!*web/dist/**
+
+# But when using the GitHub Action with app_location=web/dist, this file is
+# largely redundant. It's here as a safety net if a portal-triggered deploy is used.
+

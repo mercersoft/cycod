@@ -16,7 +16,7 @@ import { useEffect, useState } from "react"
 import InstallModal from "./InstallModal"
 import SignInModal from "./SignInModal"
 import { getFirebaseApp, signOutAndLog } from "@/lib/firebase"
-import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth"
+import { getAuth, onAuthStateChanged, type User } from "firebase/auth"
 import { Link } from "react-router-dom"
 
 export default function Header() {
