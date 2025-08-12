@@ -44,6 +44,7 @@ export default function SignupTable() {
   const [windowsCount, setWindowsCount] = useState<number>(0)
   const [macCount, setMacCount] = useState<number>(0)
   const othersCount = useMemo(() => Math.max(0, totalCount - windowsCount - macCount), [totalCount, windowsCount, macCount])
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount, pageSize])
 
   const fetchPage = useCallback(async (requestedPageIndex: number) => {
     setLoading(true)
@@ -202,9 +203,7 @@ export default function SignupTable() {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="text-xs text-gray-400 font-mono">
-          Page {pageIndex + 1}
-        </div>
+        <div className="text-xs text-gray-400 font-mono">Page {pageIndex + 1} of {totalPages}</div>
         <div className="flex gap-2">
           <button
             type="button"
