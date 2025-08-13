@@ -235,7 +235,6 @@ export async function getChatStatus(): Promise<{
       return parsed;
     } catch (e) {
       lastErr = e
-      console.error(`getChatStatus attempt ${i + 1} failed:`, e);
       await delay(50)
     }
   }
@@ -320,7 +319,6 @@ export class StreamingChatCallback {
   async OnFunctionCallApproval(functionName: string, functionArgs: string | null): Promise<boolean> {
     // For now, auto-approve all function calls
     // In a real implementation, you'd show a dialog to the user
-    console.log(`Function approval requested: ${functionName}(${functionArgs})`);
     return true;
   }
   

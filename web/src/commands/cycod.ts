@@ -5,14 +5,9 @@ let chatActive = false
 let chatInitialized = false
 
 async function handleChatCommand(args: string[], addOutput: (text: string) => void, endOutput: () => void) {
-  // Basic debug output to verify function is called
-  addOutput(`DEBUG: handleChatCommand called with args: ${JSON.stringify(args)}`)
-  console.log('handleChatCommand called with args:', args)
-  
   try {
     // Parse chat subcommands
     const subCommand = args[0]
-    addOutput(`DEBUG: subCommand = "${subCommand}"`)
     
     if (subCommand === '--help' || subCommand === '-h') {
       addOutput('Chat commands:')
@@ -33,12 +28,8 @@ async function handleChatCommand(args: string[], addOutput: (text: string) => vo
     }
     
     if (subCommand === '--test') {
-      addOutput('DEBUG: Starting --test command')
-      console.log('Starting --test command')
       try {
-        addOutput('DEBUG: About to call testChat()')
         const result = await testChat()
-        addOutput(`DEBUG: testChat() returned: ${JSON.stringify(result)}`)
         if (result.Success) {
           addOutput('✓ Chat connectivity test passed')
           addOutput(`Message: ${result.Message}`)
@@ -48,8 +39,7 @@ async function handleChatCommand(args: string[], addOutput: (text: string) => vo
         }
       } catch (error) {
         addOutput('✗ Chat connectivity test failed')
-        addOutput(`DEBUG: Exception in --test: ${error}`)
-        console.error('Test command error:', error)
+        addOutput(`Error: ${error}`)
       }
       endOutput()
       return
@@ -57,9 +47,7 @@ async function handleChatCommand(args: string[], addOutput: (text: string) => vo
     
     if (subCommand === '--status') {
       try {
-        addOutput('Calling getChatStatus...')
         const status = await getChatStatus()
-        addOutput(`Status response: ${JSON.stringify(status)}`)
         if (status.Success) {
           addOutput(`Chat initialized: ${status.IsInitialized ? 'Yes' : 'No'}`)
           if (status.Capabilities) {
@@ -73,8 +61,7 @@ async function handleChatCommand(args: string[], addOutput: (text: string) => vo
           addOutput(`Error: ${status.Error || 'Unknown error'}`)
         }
       } catch (error) {
-        addOutput(`Exception in --status: ${error}`)
-        console.error('Status command error:', error)
+        addOutput(`Error: ${error}`)
       }
       endOutput()
       return
@@ -138,11 +125,9 @@ async function handleChatCommand(args: string[], addOutput: (text: string) => vo
     if (!chatInitialized) {
       try {
         addOutput('Initializing chat...')
-        addOutput('Calling initializeChat...')
         const initResult = await initializeChat(
           'You are a helpful AI assistant. Provide clear, concise, and accurate responses.'
         )
-        addOutput(`InitializeChat result: ${JSON.stringify(initResult)}`)
         if (!initResult.Success) {
           addOutput(`Error initializing chat: ${initResult.Error || 'Unknown error'}`)
           endOutput()
@@ -151,8 +136,7 @@ async function handleChatCommand(args: string[], addOutput: (text: string) => vo
         chatInitialized = true
         addOutput('Chat initialized successfully!')
       } catch (error) {
-        addOutput(`Exception during initialization: ${error}`)
-        console.error('Chat initialization error:', error)
+        addOutput(`Error during initialization: ${error}`)
         endOutput()
         return
       }
@@ -290,8 +274,7 @@ async function handleChatCommand(args: string[], addOutput: (text: string) => vo
       endOutput()
     }
   } catch (error) {
-    addOutput(`Outer catch - Error: ${error}`)
-    console.error('handleChatCommand outer error:', error)
+    addOutput(`Error: ${error}`)
     endOutput()
   }
 }
