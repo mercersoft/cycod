@@ -49,6 +49,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\common\common.csproj" />
+    <ProjectReference Include="..\cycodlib\cycodlib.csproj" />
   </ItemGroup>
 
   <ItemGroup>
