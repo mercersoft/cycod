@@ -87,7 +87,36 @@ public class ChatService : IAsyncDisposable
                             });
                         }
                     }
-                }
+                },
+                approveFunctionCall: callback != null 
+                    ? (functionName, functionArgs) =>
+                    {
+                        try
+                        {
+                            // Convert to synchronous call for now - ideally this would be async
+                            var task = callback.Value.OnFunctionCallApproval(functionName, functionArgs);
+                            return task.GetAwaiter().GetResult();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.WriteError($"Error getting function approval: {ex.Message}");
+                            return false; // Default to deny on error
+                        }
+                    }
+                    : null,
+                functionCallCallback: callback != null 
+                    ? (functionName, functionArgs, functionResult) =>
+                    {
+                        try
+                        {
+                            callback.Value.OnFunctionCall(functionName, functionArgs, functionResult);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.WriteError($"Error invoking function call callback: {ex.Message}");
+                        }
+                    }
+                    : null
             );
 
             // Notify completion

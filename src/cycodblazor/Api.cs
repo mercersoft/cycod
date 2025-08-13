@@ -117,9 +117,36 @@ public static class Api
       return JsonSerializer.Serialize(new { success = false, error = ex.Message });
     }
   }
+
+  // Get chat service status and capabilities
+  [JSInvokable(nameof(GetChatStatus))]
+  public static string GetChatStatus()
+  {
+    try
+    {
+      var status = new
+      {
+        success = true,
+        isInitialized = _chatService != null,
+        capabilities = new
+        {
+          streaming = true,
+          functionCalling = true,
+          historyPersistence = true,
+          approvalWorkflow = true
+        },
+        version = "1.0.0"
+      };
+      return JsonSerializer.Serialize(status);
+    }
+    catch (Exception ex)
+    {
+      return JsonSerializer.Serialize(new { success = false, error = ex.Message });
+    }
+  }
 }
 
-// Callback class for streaming responses
+// Callback class for streaming responses and function calling
 public class StreamingCallback
 {
   [JSInvokable]
@@ -138,5 +165,41 @@ public class StreamingCallback
   public void OnError(string error)
   {
     // Called when an error occurs during streaming
+  }
+
+  [JSInvokable]
+  public async Task<bool> OnFunctionCallApproval(string functionName, string? functionArgs)
+  {
+    // Called when a function call requires approval
+    try
+    {
+      var jsRuntime = GetJSRuntime();
+      if (jsRuntime != null)
+      {
+        return await jsRuntime.InvokeAsync<bool>("chatHelpers.showFunctionCallApproval", functionName, functionArgs ?? "{}");
+      }
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"Error showing function approval dialog: {ex.Message}");
+    }
+    
+    // Default to deny if we can't show the approval dialog
+    return false;
+  }
+
+  [JSInvokable]
+  public void OnFunctionCall(string functionName, string? functionArgs, string? functionResult)
+  {
+    // Called when a function is executed
+    Console.WriteLine($"Function called: {functionName} with args: {functionArgs} -> result: {functionResult}");
+  }
+
+  // Helper method to get JSRuntime (this would need to be injected properly in a real implementation)
+  private static IJSRuntime? GetJSRuntime()
+  {
+    // TODO: This should be properly injected via DI
+    // For now, this is a placeholder that would need to be implemented
+    return null;
   }
 }
