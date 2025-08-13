@@ -29,16 +29,25 @@ rsync -a --delete --prune-empty-dirs \
   --exclude 'lib/' --exclude 'samples/' \
   .blazor-publish/wwwroot/_framework/ web/public/_framework/
 
-# copy essential static files only (exclude large JSON manifest)
+# copy essential static files only (exclude large JSON manifest and _framework)
 rsync -a --delete --prune-empty-dirs \
   --exclude '_framework/' --exclude 'lib/' \
   --exclude '*.map' --exclude 'samples/' \
   --exclude '*.staticwebassets.endpoints.json' \
-  .blazor-publish/wwwroot/ web/public/blazor/
+  .blazor-publish/wwwroot/ web/public/
+
+# Ensure the Blazor loader scripts are in the correct location for React app
+if [ ! -f "web/public/_framework/blazor.webassembly.js" ] && [ -f ".blazor-publish/wwwroot/_framework/blazor.webassembly.js" ]; then
+  cp .blazor-publish/wwwroot/_framework/blazor.webassembly.js web/public/_framework/
+fi
 
 # Remove large unnecessary files from public directory
 rm -f web/public/cycodblazor.staticwebassets.endpoints.json
 rm -f web/public/*.staticwebassets.endpoints.json
+
+# Copy Blazor files to React build output for deployment
+mkdir -p web/dist/_framework
+cp -r web/public/_framework/* web/dist/_framework/
 
 # Show final size
 echo "Final web deployment size:"
