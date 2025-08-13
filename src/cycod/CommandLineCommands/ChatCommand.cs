@@ -1,6 +1,8 @@
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
 using System.Text;
+using Cycodlib.Core.Chat;
+using Cycodlib.Functions;
 
 public class ChatCommand : CommandWithVariables
 {

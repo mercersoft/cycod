@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
+using Cycodlib.Core.Chat;
 
 public static class AIExtensionsChatHelpers
 {

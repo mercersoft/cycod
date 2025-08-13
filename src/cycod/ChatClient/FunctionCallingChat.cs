@@ -1,5 +1,6 @@
 using Microsoft.Extensions.AI;
 using System.Text.Json;
+using Cycodlib.Core.Chat;
 
 public class FunctionCallingChat : IAsyncDisposable
 {

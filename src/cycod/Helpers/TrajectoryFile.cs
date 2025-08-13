@@ -5,6 +5,7 @@
 
 using System.Text;
 using Microsoft.Extensions.AI;
+using Cycodlib.Core.Formatting;
 
 public class TrajectoryFile
 {
