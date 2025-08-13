@@ -25,6 +25,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "cycod-mcp-mxlookup", "src\m
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "cycod-mcp-geolocation", "src\mcp\geolocation\cycod-mcp-geolocation.csproj", "{5283A75C-3392-4C80-B4DE-A8C62779ACFC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{89488091-694F-4C80-B73F-2B53D472DC91}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cycodlib", "src\cycodlib\cycodlib.csproj", "{13A6BDC0-B82A-4B68-B5B9-A824DD6E9C0E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +75,10 @@ Global
 		{5283A75C-3392-4C80-B4DE-A8C62779ACFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5283A75C-3392-4C80-B4DE-A8C62779ACFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5283A75C-3392-4C80-B4DE-A8C62779ACFC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13A6BDC0-B82A-4B68-B5B9-A824DD6E9C0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13A6BDC0-B82A-4B68-B5B9-A824DD6E9C0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13A6BDC0-B82A-4B68-B5B9-A824DD6E9C0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13A6BDC0-B82A-4B68-B5B9-A824DD6E9C0E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,6 +89,7 @@ Global
 		{C796B41A-7601-2016-C85F-3D6024B9046F} = {691974F9-483A-4232-9746-F777D75C8958}
 		{7DC30BDB-675F-4228-8494-3BCCFF91E879} = {691974F9-483A-4232-9746-F777D75C8958}
 		{5283A75C-3392-4C80-B4DE-A8C62779ACFC} = {691974F9-483A-4232-9746-F777D75C8958}
+		{13A6BDC0-B82A-4B68-B5B9-A824DD6E9C0E} = {89488091-694F-4C80-B73F-2B53D472DC91}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E4317ED2-53B7-4A13-8AC7-3FD18B517E96}

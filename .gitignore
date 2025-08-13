@@ -14,6 +14,8 @@ src/mcp/**/bin/
 
 src/cycodblazor/obj/
 src/cycodblazor/bin/
+src/cycodlib/obj/
+src/cycodlib/bin/
 
 .blazor-publish/
 
