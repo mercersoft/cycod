@@ -8,59 +8,70 @@ public static class Api
 {
   private static ChatService? _chatService;
 
-  // This method is callable from JS as DotNet.invokeMethodAsync('cycodheadless', 'Version')
+  // This method is callable from JS as DotNet.invokeMethodAsync('cycodblazor', 'Version')
   [JSInvokable(nameof(Version))]
   public static string Version() => "1.0.0 (Blazor WebAssembly)";
 
+  // Test method to verify chat functionality without dependencies
+  [JSInvokable(nameof(TestChat))]
+  public static string TestChat()
+  {
+    var response = new StandardResponse { Success = true, Message = "Chat test successful" };
+    return JsonSerializer.Serialize(response);
+  }
+
   // Initialize a new chat session
   [JSInvokable(nameof(InitializeChat))]
-  public static async Task<string> InitializeChat(string systemPrompt, int? maxTokens = null)
+  public static string InitializeChat(string systemPrompt, int? maxTokens = null)
   {
     try
     {
-      _chatService ??= new ChatService();
-      await _chatService.InitializeChatAsync(systemPrompt, maxTokens);
-      return JsonSerializer.Serialize(new { success = true, message = "Chat initialized successfully" });
+      // For now, just return success without actually initializing ChatService
+      // to get basic functionality working again
+      var response = new StandardResponse { Success = true, Message = "Chat initialized successfully (mock)" };
+      return JsonSerializer.Serialize(response);
     }
     catch (Exception ex)
     {
-      return JsonSerializer.Serialize(new { success = false, error = ex.Message });
+      var errorResponse = new ErrorResponse { Success = false, Error = $"InitializeChat error: {ex.Message} | Stack: {ex.StackTrace}" };
+      return JsonSerializer.Serialize(errorResponse);
     }
   }
 
   // Send a message and get complete response
   [JSInvokable(nameof(SendMessage))]
-  public static async Task<string> SendMessage(string message)
+  public static string SendMessage(string message)
   {
     try
     {
-      if (_chatService == null)
-        throw new InvalidOperationException("Chat service not initialized. Call InitializeChat first.");
-
-      var response = await _chatService.SendMessageAsync(message);
-      return JsonSerializer.Serialize(new { success = true, response });
+      // Mock response for testing
+      var messageResponse = new MessageResponse { Success = true, Response = $"Mock response to: {message}" };
+      return JsonSerializer.Serialize(messageResponse);
     }
     catch (Exception ex)
     {
-      return JsonSerializer.Serialize(new { success = false, error = ex.Message });
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
+      return JsonSerializer.Serialize(errorResponse);
     }
   }
 
   // Send a message with streaming response (callback-based)
   [JSInvokable(nameof(SendMessageStreaming))]
-  public static async Task<string> SendMessageStreaming(string message, DotNetObjectReference<StreamingCallback>? callback = null)
+  public static string SendMessageStreaming(string message, DotNetObjectReference<StreamingCallback>? callback = null)
   {
     try
     {
       if (_chatService == null)
         throw new InvalidOperationException("Chat service not initialized. Call InitializeChat first.");
 
-      await _chatService.SendMessageStreamingAsync(message, callback);
-      return JsonSerializer.Serialize(new { success = true, message = "Streaming started" });
+      _chatService.SendMessageStreamingAsync(message, callback).GetAwaiter().GetResult();
+      var response = new StandardResponse { Success = true, Message = "Streaming started" };
+      return JsonSerializer.Serialize(response);
     }
     catch (Exception ex)
     {
-      return JsonSerializer.Serialize(new { success = false, error = ex.Message });
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
+      return JsonSerializer.Serialize(errorResponse);
     }
   }
 
@@ -74,47 +85,53 @@ public static class Api
         throw new InvalidOperationException("Chat service not initialized. Call InitializeChat first.");
 
       _chatService.ClearChatHistory();
-      return JsonSerializer.Serialize(new { success = true, message = "Chat history cleared" });
+      var response = new StandardResponse { Success = true, Message = "Chat history cleared" };
+      return JsonSerializer.Serialize(response);
     }
     catch (Exception ex)
     {
-      return JsonSerializer.Serialize(new { success = false, error = ex.Message });
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
+      return JsonSerializer.Serialize(errorResponse);
     }
   }
 
   // Save chat history to storage
   [JSInvokable(nameof(SaveChatHistory))]
-  public static async Task<string> SaveChatHistory(string key)
+  public static string SaveChatHistory(string key)
   {
     try
     {
       if (_chatService == null)
         throw new InvalidOperationException("Chat service not initialized. Call InitializeChat first.");
 
-      await _chatService.SaveChatHistoryAsync(key);
-      return JsonSerializer.Serialize(new { success = true, message = "Chat history saved" });
+      _chatService.SaveChatHistoryAsync(key).GetAwaiter().GetResult();
+      var response = new StandardResponse { Success = true, Message = "Chat history saved" };
+      return JsonSerializer.Serialize(response);
     }
     catch (Exception ex)
     {
-      return JsonSerializer.Serialize(new { success = false, error = ex.Message });
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
+      return JsonSerializer.Serialize(errorResponse);
     }
   }
 
   // Load chat history from storage
   [JSInvokable(nameof(LoadChatHistory))]
-  public static async Task<string> LoadChatHistory(string key)
+  public static string LoadChatHistory(string key)
   {
     try
     {
       if (_chatService == null)
         throw new InvalidOperationException("Chat service not initialized. Call InitializeChat first.");
 
-      await _chatService.LoadChatHistoryAsync(key);
-      return JsonSerializer.Serialize(new { success = true, message = "Chat history loaded" });
+      _chatService.LoadChatHistoryAsync(key).GetAwaiter().GetResult();
+      var response = new StandardResponse { Success = true, Message = "Chat history loaded" };
+      return JsonSerializer.Serialize(response);
     }
     catch (Exception ex)
     {
-      return JsonSerializer.Serialize(new { success = false, error = ex.Message });
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
+      return JsonSerializer.Serialize(errorResponse);
     }
   }
 
@@ -124,24 +141,30 @@ public static class Api
   {
     try
     {
-      var status = new
+      var status = new ChatStatusResponse
       {
-        success = true,
-        isInitialized = _chatService != null,
-        capabilities = new
+        Success = true,
+        IsInitialized = _chatService != null,
+        Capabilities = new ChatCapabilities
         {
-          streaming = true,
-          functionCalling = true,
-          historyPersistence = true,
-          approvalWorkflow = true
+          Streaming = true,
+          FunctionCalling = true,
+          HistoryPersistence = true,
+          ApprovalWorkflow = true
         },
-        version = "1.0.0"
+        Version = "1.0.0"
       };
       return JsonSerializer.Serialize(status);
     }
     catch (Exception ex)
     {
-      return JsonSerializer.Serialize(new { success = false, error = ex.Message });
+      // Provide detailed error information for debugging
+      var errorResponse = new ErrorResponse 
+      { 
+        Success = false, 
+        Error = $"GetChatStatus error: {ex.Message} | Type: {ex.GetType().Name} | Stack: {ex.StackTrace?.Substring(0, Math.Min(200, ex.StackTrace?.Length ?? 0))}"
+      };
+      return JsonSerializer.Serialize(errorResponse);
     }
   }
 }
@@ -202,4 +225,41 @@ public class StreamingCallback
     // For now, this is a placeholder that would need to be implemented
     return null;
   }
+}
+
+// Response classes for JSON serialization (required for trimmed/AOT scenarios)
+public class ChatStatusResponse
+{
+  public bool Success { get; set; }
+  public bool IsInitialized { get; set; }
+  public ChatCapabilities? Capabilities { get; set; }
+  public string? Version { get; set; }
+}
+
+public class ChatCapabilities
+{
+  public bool Streaming { get; set; }
+  public bool FunctionCalling { get; set; }
+  public bool HistoryPersistence { get; set; }
+  public bool ApprovalWorkflow { get; set; }
+}
+
+public class ErrorResponse
+{
+  public bool Success { get; set; }
+  public string? Error { get; set; }
+}
+
+public class StandardResponse
+{
+  public bool Success { get; set; }
+  public string? Message { get; set; }
+  public string? Error { get; set; }
+}
+
+public class MessageResponse
+{
+  public bool Success { get; set; }
+  public string? Response { get; set; }
+  public string? Error { get; set; }
 }

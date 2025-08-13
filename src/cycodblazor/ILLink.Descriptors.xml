@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<linker>
+  <!-- Preserve all JSInvokable methods in the Api class -->
+  <assembly fullname="cycodblazor">
+    <type fullname="cycodblazor.Api" preserve="all">
+      <method signature="System.String Version()" />
+      <method signature="System.String TestChat()" />
+      <method signature="System.String InitializeChat(System.String,System.Nullable`1&lt;System.Int32&gt;)" />
+      <method signature="System.String SendMessage(System.String)" />
+      <method signature="System.String SendMessageStreaming(System.String,Microsoft.JSInterop.DotNetObjectReference`1&lt;cycodblazor.StreamingCallback&gt;)" />
+      <method signature="System.String ClearChatHistory()" />
+      <method signature="System.String GetChatStatus()" />
+      <method signature="System.String SaveChatHistory(System.String)" />
+      <method signature="System.String LoadChatHistory(System.String)" />
+    </type>
+    <!-- Preserve StreamingCallback class for JS interop -->
+    <type fullname="cycodblazor.StreamingCallback" preserve="all" />
+    <!-- Preserve response classes for JSON serialization -->
+    <type fullname="cycodblazor.ChatStatusResponse" preserve="all" />
+    <type fullname="cycodblazor.ChatCapabilities" preserve="all" />
+    <type fullname="cycodblazor.ErrorResponse" preserve="all" />
+    <type fullname="cycodblazor.StandardResponse" preserve="all" />
+    <type fullname="cycodblazor.MessageResponse" preserve="all" />
+  </assembly>
+  
+  <!-- Preserve blazor services -->
+  <assembly fullname="cycodblazor">
+    <type fullname="cycodblazor.Services.ChatService" preserve="all" />
+    <type fullname="cycodblazor.Services.BlazorLogger" preserve="all" />
+    <type fullname="cycodblazor.Services.BrowserStorageProvider" preserve="all" />
+    <type fullname="cycodblazor.Services.BlazorConfigurationProvider" preserve="all" />
+  </assembly>
+</linker>

@@ -4,16 +4,60 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-      <BlazorWebAssemblyEnableLinking>false</BlazorWebAssemblyEnableLinking>
+    <!-- Maximum trimming settings for minimal output -->
+    <BlazorWebAssemblyEnableLinking>true</BlazorWebAssemblyEnableLinking>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <BlazorWebAssemblyLoadAllGlobalizationData>false</BlazorWebAssemblyLoadAllGlobalizationData>
+    <BlazorWebAssemblyPreserveCollationData>false</BlazorWebAssemblyPreserveCollationData>
+    <DebuggerSupport>false</DebuggerSupport>
+    <EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <!-- Additional optimizations -->
+    <BlazorWebAssemblyI18NAssemblies>none</BlazorWebAssemblyI18NAssemblies>
+    <BlazorWebAssemblyLoadBootResource>false</BlazorWebAssemblyLoadBootResource>
+    <ILLinkTreatWarningsAsErrors>false</ILLinkTreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.7" PrivateAssets="all" />
+    <PackageReference Include="System.Text.Json" Version="9.0.5" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\cycodlib\cycodlib.csproj" />
+  </ItemGroup>
+
+  <!-- Exclude test assemblies and language resources from production -->
+  <ItemGroup>
+    <BlazorWebAssemblyLazyLoad Include="*Test*.dll" />
+    <BlazorWebAssemblyLazyLoad Include="Microsoft.VisualStudio.TestPlatform*.dll" />
+    <BlazorWebAssemblyLazyLoad Include="Microsoft.TestPlatform*.dll" />
+    <BlazorWebAssemblyLazyLoad Include="xunit*.dll" />
+    <BlazorWebAssemblyLazyLoad Include="nunit*.dll" />
+    <BlazorWebAssemblyLazyLoad Include="MSTest*.dll" />
+  </ItemGroup>
+
+  <!-- Exclude language resource assemblies -->
+  <ItemGroup>
+    <BlazorWebAssemblyLazyLoad Include="*.resources.dll" />
+  </ItemGroup>
+
+  <!-- Remove test platform from linking -->
+  <ItemGroup>
+    <TrimmerRootAssembly Remove="Microsoft.TestPlatform.PlatformAbstractions" />
+    <TrimmerRootAssembly Remove="Microsoft.VisualStudio.TestPlatform.ObjectModel" />
+    <TrimmerRootAssembly Remove="Microsoft.TestPlatform.CoreUtilities" />
+  </ItemGroup>
+
+  <!-- Preserve our API methods from trimming -->
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+    <TrimmerRootAssembly Include="cycodblazor" />
+    <TrimmerRootAssembly Include="cycodlib" />
   </ItemGroup>
 
 </Project>
