@@ -11,4 +11,25 @@ export default defineConfig({
       "@": resolve(fileURLToPath(new URL('.', import.meta.url)), "./src"),
     },
   },
+  build: {
+    // Optimize for production size
+    minify: 'esbuild',
+    cssMinify: true,
+    rollupOptions: {
+      output: {
+        // Optimize chunk splitting for better caching
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@radix-ui/react-slot', 'lucide-react']
+        },
+        // Exclude source maps to reduce size
+        sourcemap: false
+      }
+    },
+    // Target modern browsers for smaller output
+    target: 'es2020'
+  },
+  // Optimize public directory handling
+  publicDir: 'public',
+  assetsInclude: ['**/*.wasm']
 })

@@ -31,3 +31,15 @@ tests/cycodt-yaml/testresults/
 tests/cycodt-yaml/inception-layer-1/test-results-simple-optional.trx
 tests/cycodt-yaml/inception-layer-1/test-results-simple.trx
 tests/cycodt-yaml/inception-layer-1/test-results-simple?.trx
+
+# Web build artifacts
+web/dist/
+web/public/_framework/
+web/public/blazor/
+web/**/*.wasm
+web/**/*.dat
+web/**/*.gz
+web/**/*.br
+web/**/*.map
+web/**/*.staticwebassets.endpoints.json
+web/functions/lib/

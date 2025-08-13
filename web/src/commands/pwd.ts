@@ -7,7 +7,7 @@ export const pwdCommand: CommandDefinition = {
     usage: 'pwd',
     examples: ['pwd']
   },
-  handler: (words, addOutput, endOutput) => {
+  handler: (_words, addOutput, endOutput) => {
     addOutput('/Users/' + 'user' + '/projects')
     endOutput()
   }

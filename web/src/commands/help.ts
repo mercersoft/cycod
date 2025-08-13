@@ -7,7 +7,7 @@ export const helpCommand: CommandDefinition = {
     usage: 'help [command]',
     examples: ['help', 'help ls', 'help echo']
   },
-  handler: (words, addOutput, endOutput) => {
+  handler: (_words, addOutput, endOutput) => {
     // This will be updated in index.ts to use the actual command registry
     addOutput('Available commands:')
     setTimeout(() => addOutput('  help     - Show this help message'), 100)

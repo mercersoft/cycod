@@ -1,0 +1,18 @@
+# Exclude large files that shouldn't be in the web build
+public/_framework/*.map
+public/_framework/*.pdb
+public/_framework/*.symbols
+public/_framework/lib/
+public/_framework/samples/
+public/_framework/*Test*
+public/_framework/icudt_CJK.*
+public/_framework/icudt_EFIGS.*
+public/**/*.br
+public/**/*.gz
+
+# Exclude development files
+*.test.*
+*.spec.*
+__tests__/
+node_modules/
+.git/

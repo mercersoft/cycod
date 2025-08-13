@@ -7,7 +7,7 @@ export const clearCommand: CommandDefinition = {
     usage: 'clear',
     examples: ['clear']
   },
-  handler: (words, addOutput, endOutput) => {
+  handler: (_words, addOutput, endOutput) => {
     addOutput('Use Ctrl+L to clear the terminal')
     endOutput()
   }

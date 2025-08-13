@@ -7,7 +7,7 @@ export const dateCommand: CommandDefinition = {
     usage: 'date',
     examples: ['date']
   },
-  handler: (words, addOutput, endOutput) => {
+  handler: (_words, addOutput, endOutput) => {
     addOutput(new Date().toString())
     endOutput()
   }

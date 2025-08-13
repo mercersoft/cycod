@@ -7,7 +7,7 @@ export const lsCommand: CommandDefinition = {
     usage: 'ls [-la] [path]',
     examples: ['ls', 'ls -la', 'ls /home/user']
   },
-  handler: (words, addOutput, endOutput) => {
+  handler: (_words, addOutput, endOutput) => {
     addOutput('total 64')
     setTimeout(() => addOutput('drwxr-xr-x  12 user  staff   384 Jan 15 10:23 .'), 50)
     setTimeout(() => addOutput('drwxr-xr-x   7 user  staff   224 Jan 15 09:15 ..'), 100)

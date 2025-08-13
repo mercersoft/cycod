@@ -1,4 +1,4 @@
-import type { CommandRegistry, CommandHandler } from './types'
+import type { CommandRegistry } from './types'
 import { helpCommand } from './help'
 import { lsCommand } from './ls'
 import { pwdCommand } from './pwd'
