@@ -12,6 +12,11 @@ src/cycodt/bin/
 src/mcp/**/obj/
 src/mcp/**/bin/
 
+src/cycodblazor/obj/
+src/cycodblazor/bin/
+
+.blazor-publish/
+
 tests/**/bin/
 tests/**/obj/
 
