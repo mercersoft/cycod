@@ -40,7 +40,7 @@ jobs:
       - name: Build React App (without clean)
         run: |
           cd web
-          tsc -b && vite build
+          npx tsc -b && npx vite build
       
       - name: Build Blazor WebAssembly
         run: ./publish_blazor.sh
