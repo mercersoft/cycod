@@ -2,15 +2,22 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isOwner() {
-      // Allowlisted admins (must be authenticated when reading/updating)
+    function isSignedIn() { return request.auth != null; }
+    function getUserRole() { return request.auth.token.role; }
+    function isAdmin() { return isSignedIn() && request.auth.token.admin == true; }
+    function isModerator() { return isSignedIn() && request.auth.token.moderator == true; }
+    function isSuperAdmin() { return isSignedIn() && getUserRole() == 'super-admin'; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+
+    // TEMP: legacy allowlist during migration
+    function isLegacyOwner() {
       return request.auth != null && (
         request.auth.token.email == 'philipp.h.schmid@gmail.com' ||
         request.auth.token.email == 'robc@thinkman.com'
       );
     }
 
-    // auth: anyone can create with strict schema; only owner can read/update/delete
+    // auth: anyone can create with strict schema; read/update gated by roles or legacy allowlist
     match /auth/{docId} {
       allow create: if
         request.resource.data.keys().hasOnly(["createdAt", "email", "action", "env"]) &&
@@ -19,9 +26,9 @@ service cloud.firestore {
         request.resource.data.action is string &&
         request.resource.data.env is string;
 
-      allow read: if isOwner();
+      allow read: if isModerator() || isAdmin() || isLegacyOwner();
 
-      allow update, delete: if isOwner() &&
+      allow update, delete: if (isAdmin() || isLegacyOwner()) &&
         request.resource.data.keys().hasOnly(["createdAt", "email", "action", "env"]) &&
         request.resource.data.createdAt is timestamp &&
         request.resource.data.email is string &&
@@ -29,7 +36,7 @@ service cloud.firestore {
         request.resource.data.env is string;
     }
 
-    // theMovement: anyone can create with strict schema; only owner can read/update/delete
+    // theMovement: anyone can create with strict schema; read/update gated by roles or legacy allowlist
     match /theMovement/{docId} {
       allow create: if
         request.resource.data.keys().hasOnly(["signup", "email", "env"]) &&
@@ -37,13 +44,26 @@ service cloud.firestore {
         request.resource.data.email is string &&
         request.resource.data.env is string;
 
-      allow read: if isOwner();
+      allow read: if isModerator() || isAdmin() || isLegacyOwner();
 
-      allow update, delete: if isOwner() &&
+      allow update, delete: if (isAdmin() || isLegacyOwner()) &&
         request.resource.data.keys().hasOnly(["signup", "email", "env"]) &&
         request.resource.data.signup is timestamp &&
         request.resource.data.email is string &&
         request.resource.data.env is string;
+    }
+
+    // users collection governed by RBAC
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isModerator();
+      allow write: if isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.role == 'user';
+    }
+
+    // audit logs (read-only for admins; written by functions only)
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // Deny everything else by default
