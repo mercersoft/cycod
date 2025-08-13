@@ -41,8 +41,8 @@ export default function Header() {
     { label: "Blog", href: "/" },
   ] as const
 
-  const navItems =
-    currentUser?.email?.toLowerCase() === "philipp.h.schmid@gmail.com"
+  const isAdmin = ["philipp.h.schmid@gmail.com", "robc@thinkman.com"].includes((currentUser?.email ?? "").toLowerCase())
+  const navItems = isAdmin
       ? [...baseNavItems, { label: "theMovement", href: "/admin" }]
       : baseNavItems
   return (

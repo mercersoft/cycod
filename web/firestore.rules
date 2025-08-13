@@ -3,8 +3,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isOwner() {
-      // Replace with your email (must be authenticated when reading/updating)
-      return request.auth != null && request.auth.token.email == 'philipp.h.schmid@gmail.com';
+      // Allowlisted admins (must be authenticated when reading/updating)
+      return request.auth != null && (
+        request.auth.token.email == 'philipp.h.schmid@gmail.com' ||
+        request.auth.token.email == 'robc@thinkman.com'
+      );
     }
 
     // auth: anyone can create with strict schema; only owner can read/update/delete

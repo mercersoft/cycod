@@ -34,7 +34,7 @@ export default function Admin() {
     )
   }
 
-  const allowed = user?.email?.toLowerCase() === "philipp.h.schmid@gmail.com"
+  const allowed = ["philipp.h.schmid@gmail.com", "robc@thinkman.com"].includes((user?.email ?? "").toLowerCase())
   if (!allowed) return <ErrorPage />
 
   return (
