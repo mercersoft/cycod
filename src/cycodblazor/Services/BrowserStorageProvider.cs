@@ -5,22 +5,34 @@ using Cycodlib.Abstractions;
 namespace Cycodblazor.Services
 {
     /// <summary>
-    /// Browser implementation of IStorageProvider using localStorage
+    /// Enhanced browser implementation of IStorageProvider with IndexedDB support for large data
     /// </summary>
     public class BrowserStorageProvider : IStorageProvider
     {
         private readonly IJSRuntime _jsRuntime;
+        private readonly int _localStorageMaxSize;
+        private bool _indexedDbInitialized = false;
         
-        public BrowserStorageProvider(IJSRuntime jsRuntime)
+        public BrowserStorageProvider(IJSRuntime jsRuntime, int localStorageMaxSize = 1024 * 1024) // 1MB default
         {
             _jsRuntime = jsRuntime;
+            _localStorageMaxSize = localStorageMaxSize;
         }
 
         public async Task<string?> ReadTextAsync(string path)
         {
             try
             {
-                return await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", path);
+                // Try localStorage first for small data
+                var localData = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", path);
+                if (localData != null)
+                {
+                    return localData;
+                }
+
+                // Try IndexedDB for larger data
+                await EnsureIndexedDbInitializedAsync();
+                return await _jsRuntime.InvokeAsync<string?>("indexedDbGet", "CycodStorage", path);
             }
             catch
             {
@@ -32,11 +44,34 @@ namespace Cycodblazor.Services
         {
             try
             {
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", path, content);
+                var contentSize = System.Text.Encoding.UTF8.GetByteCount(content);
+                
+                if (contentSize <= _localStorageMaxSize)
+                {
+                    // Use localStorage for small data
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", path, content);
+                }
+                else
+                {
+                    // Use IndexedDB for large data
+                    await EnsureIndexedDbInitializedAsync();
+                    await _jsRuntime.InvokeVoidAsync("indexedDbSet", "CycodStorage", path, content);
+                    
+                    // Remove from localStorage if it exists there
+                    await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", path);
+                }
             }
             catch
             {
-                // Ignore storage errors
+                // Fallback: try to store in localStorage anyway
+                try
+                {
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", path, content);
+                }
+                catch
+                {
+                    // Ignore storage errors
+                }
             }
         }
 
@@ -95,6 +130,10 @@ namespace Cycodblazor.Services
             try
             {
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", path);
+                
+                // Also remove from IndexedDB if it exists there
+                await EnsureIndexedDbInitializedAsync();
+                await _jsRuntime.InvokeVoidAsync("indexedDbDelete", "CycodStorage", path);
             }
             catch
             {
@@ -129,6 +168,22 @@ namespace Cycodblazor.Services
             catch
             {
                 return null;
+            }
+        }
+
+        private async Task EnsureIndexedDbInitializedAsync()
+        {
+            if (!_indexedDbInitialized)
+            {
+                try
+                {
+                    await _jsRuntime.InvokeVoidAsync("initializeIndexedDb", "CycodStorage");
+                    _indexedDbInitialized = true;
+                }
+                catch
+                {
+                    // IndexedDB initialization failed - will fallback to localStorage
+                }
             }
         }
     }

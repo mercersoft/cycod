@@ -31,33 +31,65 @@ namespace Cycod.Implementation
 
         public async Task SaveConfigValueAsync(string key, string value)
         {
-            // The existing ConfigStore.Instance might not have async save operations
-            // This would need to be implemented based on the actual ConfigStore API
             await Task.Run(() => {
-                // TODO: Implement async save operation
-                // This might require calling ConfigStore methods or file operations
+                try
+                {
+                    // Use the existing ConfigStore to save the value in user scope
+                    ConfigStore.Instance.Set(key, value, ConfigFileScope.User);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Failed to save config value '{key}': {ex.Message}", ex);
+                }
             });
         }
 
         public async Task RemoveConfigValueAsync(string key)
         {
-            // The existing ConfigStore.Instance might not have async remove operations
-            // This would need to be implemented based on the actual ConfigStore API
             await Task.Run(() => {
-                // TODO: Implement async remove operation
-                // This might require calling ConfigStore methods
+                try
+                {
+                    // Use the existing ConfigStore to remove the value from user scope
+                    ConfigStore.Instance.Clear(key, ConfigFileScope.User);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Failed to remove config value '{key}': {ex.Message}", ex);
+                }
             });
         }
 
         public async Task<IEnumerable<string>> GetAllKeysAsync()
         {
-            // The existing ConfigStore.Instance might not have a method to get all keys
-            // This would need to be implemented based on the actual ConfigStore API
             return await Task.Run(() => {
-                // TODO: Implement get all keys operation
-                // This might require calling ConfigStore methods
-                return Array.Empty<string>();
+                try
+                {
+                    // Get all keys from all scopes
+                    var userKeys = GetKeysFromScope(ConfigFileScope.User);
+                    var projectKeys = GetKeysFromScope(ConfigFileScope.Local);
+                    var globalKeys = GetKeysFromScope(ConfigFileScope.Global);
+                    
+                    return userKeys.Concat(projectKeys).Concat(globalKeys).Distinct();
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Failed to get all config keys: {ex.Message}", ex);
+                }
             });
+        }
+
+        private static IEnumerable<string> GetKeysFromScope(ConfigFileScope scope)
+        {
+            try
+            {
+                // This would need to be implemented based on actual ConfigStore internals
+                // For now, return empty collection as the ConfigStore doesn't expose key enumeration
+                return Array.Empty<string>();
+            }
+            catch
+            {
+                return Array.Empty<string>();
+            }
         }
     }
 }
