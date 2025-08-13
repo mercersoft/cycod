@@ -1,6 +1,7 @@
 import Header from "@/components/Header"
 import StarfieldBackground from "@/components/StarfieldBackground"
 import InteractiveTerminalCardMac from "@/components/InteractiveTerminalCardMac"
+import { version } from "@/cycodblazor"
 
 export default function TryItLive() {
   function handleCommand(command: string, addOutput: (text: string) => void, endOutput: () => void) {
@@ -53,7 +54,7 @@ export default function TryItLive() {
         endOutput()
         break
       }
-      case 'cyco': {
+      case 'cycod': {
         if (words[1] === 'init') {
           addOutput('✓ Creating project structure...')
           setTimeout(() => addOutput('✓ Installing dependencies...'), 500)
@@ -62,6 +63,24 @@ export default function TryItLive() {
           setTimeout(() => addOutput(''), 2000)
           setTimeout(() => addOutput('🚀 Project ready! Run "cyco dev" to start'), 2100)
           setTimeout(() => endOutput(), 2200)
+        } else if (words[1] === '--version' || words[1] === '-v' || words[1] === 'version') {
+          version()
+            .then((v) => {
+              addOutput(`CycoDev CLI v${v}`)
+            })
+            .catch((err) => {
+              addOutput('Error: Unable to get version')
+              const asString = (() => {
+                try { return JSON.stringify(err) } catch { return String(err) }
+              })()
+              if (err && typeof err === 'object') {
+                const anyErr = err as { message?: string; stack?: string }
+                if (anyErr.message) addOutput(`message: ${anyErr.message}`)
+                if (anyErr.stack) addOutput(`stack: ${anyErr.stack}`)
+              }
+              if (asString && asString !== '""') addOutput(`details: ${asString}`)
+            })
+            .finally(() => endOutput())
         } else if (words[1] === 'deploy') {
           addOutput('Building application...')
           setTimeout(() => addOutput('Optimizing bundles...'), 300)
@@ -97,7 +116,8 @@ export default function TryItLive() {
       <main className="min-h-screen pt-24 text-white">
         <div className="max-w-4xl mx-auto px-4 py-20">
           <h1 className="text-3xl md:text-4xl font-mono text-green-400">Try It Live</h1>
-          <p className="text-gray-300 mt-4">Try simple commands like <code className="font-mono text-white">help</code> or <code className="font-mono text-white">echo hello</code>.</p>
+          <p className="text-gray-300 mt-4">You are using the same CLI code as you would <a href="/start" className="text-cyan-400">install on your own machine</a>!</p>
+          <p className="text-gray-300 mt-4">Try simple commands like <code className="font-mono text-white">cycod --version</code> or <code className="font-mono text-white">cycod config list</code>.</p>
 
           <div className="mt-8">
             <InteractiveTerminalCardMac
@@ -127,8 +147,9 @@ export default function TryItLive() {
             <li>• <span className="text-cyan-400">ls</span> - List files</li>
             <li>• <span className="text-cyan-400">pwd</span> - Show current directory</li>
             <li>• <span className="text-cyan-400">echo hello world</span> - Echo a message</li>
-            <li>• <span className="text-cyan-400">cyco init</span> - Initialize a CycoAI project</li>
-            <li>• <span className="text-cyan-400">cyco deploy</span> - Deploy to production</li>
+            <li>• <span className="text-cyan-400">cycod init</span> - Initialize a CycoAI project</li>
+            <li>• <span className="text-cyan-400">cycod deploy</span> - Deploy to production</li>
+            <li>• <span className="text-cyan-400">cycod --version</span> - calls the Blazor WebAssembly runtime!</li>
           </ul>
         </div>
       </main>

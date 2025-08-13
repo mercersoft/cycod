@@ -28,6 +28,7 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
   const [history, setHistory] = useState<CommandOutput[]>([]);
   const [currentCommand, setCurrentCommand] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const isProcessingRef = useRef<boolean>(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -85,7 +86,11 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
 
   // Handle command submission
   const handleSubmit = () => {
-    if (currentCommand.trim() && !isProcessing) {
+    if (!currentCommand.trim()) return;
+    if (isProcessingRef.current) return;
+    // Synchronous reentrancy guard
+    isProcessingRef.current = true;
+    if (!isProcessing) {
       const cmd = currentCommand.trim();
       
       // Add to command history
@@ -125,6 +130,7 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
           return updated;
         });
         setIsProcessing(false);
+        isProcessingRef.current = false;
         
         // Focus input for next command
         setTimeout(() => {
@@ -141,6 +147,7 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.repeat) return; // prevent auto-repeat duplicates
     if (e.key === 'Enter') {
       handleSubmit();
     } else if (e.key === 'ArrowUp') {
