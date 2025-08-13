@@ -4,6 +4,27 @@ import { version, testChat, initializeChat, sendMessage, sendMessageStreaming, c
 let chatActive = false
 let chatInitialized = false
 
+function showHelp(addOutput: (text: string) => void, versionString?: string) {
+  addOutput(versionString ? `CycoAI CLI v${versionString}` : 'CycoAI CLI')
+  addOutput('')
+  addOutput('Usage: cycod [command] [options]')
+  addOutput('')
+  addOutput('Commands:')
+  addOutput('  cycod --version, -v     Show version information')
+  addOutput('  cycod chat              Start interactive chat mode')
+  addOutput('  cycod chat --help       Show detailed chat help')
+  addOutput('  cycod chat --test       Test chat connectivity')
+  addOutput('  cycod chat --status     Show chat status and capabilities')
+  addOutput('  cycod chat --clear      Clear chat history')
+  addOutput('  cycod chat --save KEY   Save chat history with key')
+  addOutput('  cycod chat --load KEY   Load chat history from key')
+  addOutput('')
+  addOutput('Examples:')
+  addOutput('  cycod chat              # Start interactive chat')
+  addOutput('  cycod chat --test       # Test if chat is working')
+  addOutput('  cycod --version         # Show version')
+}
+
 async function handleChatCommand(args: string[], addOutput: (text: string) => void, endOutput: () => void) {
   try {
     // Parse chat subcommands
@@ -308,14 +329,18 @@ export const cycodCommand: CommandDefinition = {
         .finally(() => endOutput())
     } else if (words[1] === 'chat') {
       handleChatCommand(words.slice(2), addOutput, endOutput)
+    } else if (words[1] === 'help' || words[1] === '--help' || words[1] === '-h') {
+      // Show help with actual version and complete command list
+      version()
+        .then((v) => showHelp(addOutput, v))
+        .catch(() => showHelp(addOutput))
+        .finally(() => endOutput())
     } else {
-      addOutput('CycoAI CLI v2.0.1')
-      setTimeout(() => addOutput('Usage: cyco [command] [options]'), 100)
-      setTimeout(() => addOutput(''), 200)
-      setTimeout(() => addOutput('Commands:'), 300)
-      setTimeout(() => addOutput('  chat     Start chat'), 400)
-      setTimeout(() => addOutput('  --version  Show version'), 500)
-      setTimeout(() => endOutput(), 700)
+      // Show help with actual version and complete command list
+      version()
+        .then((v) => showHelp(addOutput, v))
+        .catch(() => showHelp(addOutput))
+        .finally(() => endOutput())
     }
   }
 }
