@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Collections;
 using System.Text;
 using System.Text.Json;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.AI;
 using System.ComponentModel;
 using Cycodlib.Abstractions;
@@ -41,11 +42,12 @@ namespace Cycodlib.Functions
             AddFunctions(types);
         }
 
-        public FunctionFactory(ILogger logger, Type type) : this(logger)
+        public FunctionFactory(ILogger logger, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type type) : this(logger)
         {
             AddFunctions(type);
         }
 
+        [RequiresUnreferencedCode("Uses reflection to get all types from assembly")]
         public void AddFunctions(Assembly assembly)
         {
             AddFunctions(assembly.GetTypes());
@@ -57,6 +59,7 @@ namespace Cycodlib.Functions
             AddFunctions(types);
         }
 
+        [RequiresUnreferencedCode("Iterates over types which may not preserve method information")]
         public void AddFunctions(IEnumerable<Type> types)
         {
             foreach (var type in types)
@@ -65,7 +68,7 @@ namespace Cycodlib.Functions
             }
         }
 
-        public void AddFunctions(Type type)
+        public void AddFunctions([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type type)
         {
             var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
             foreach (var method in methods)
@@ -74,6 +77,7 @@ namespace Cycodlib.Functions
             }
         }
 
+        [RequiresUnreferencedCode("Uses reflection to get methods from instance type")]
         public void AddFunctions(object instance)
         {
             var type = instance.GetType();
@@ -218,6 +222,7 @@ namespace Cycodlib.Functions
             return true;
         }
 
+        [RequiresUnreferencedCode("Uses reflection to access Task.Result property")]
         private static object? CallAsyncFunction(MethodInfo methodInfo, object?[] args, object? instance)
         {
             var task = methodInfo.Invoke(instance, args) as Task;
@@ -315,7 +320,9 @@ namespace Cycodlib.Functions
             return ParseParameterValue(parameterValue, underlyingType!);
         }
 
-        private static object CreateGenericCollectionFromJsonArray(string parameterValue, Type collectionType, Type elementType)
+        [RequiresUnreferencedCode("Uses MakeGenericType which cannot be statically analyzed")]
+        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Necessary for generic collection creation")]
+        private static object CreateGenericCollectionFromJsonArray(string parameterValue, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type collectionType, Type elementType)
         {
             var root = JsonDocument.Parse(parameterValue).RootElement;
             var array = root.ValueKind == JsonValueKind.Array

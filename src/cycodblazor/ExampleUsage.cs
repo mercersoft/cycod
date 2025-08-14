@@ -29,7 +29,7 @@ namespace Cycodblazor
             var programInfo = new CycoDevProgramInfo();
             
             // Using ChatHistoryDefaults
-            bool useOpenAIFormat = ChatHistoryDefaults.UseOpenAIFormat;
+            // ChatHistoryDefaults.UseOpenAIFormat is available if needed
             
             // Using TrajectoryFormatter
             string formattedUser = TrajectoryFormatter.FormatUserInput("Hello, AI!");

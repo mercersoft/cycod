@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 
 public class CalcException : Exception
 {
@@ -13,6 +14,7 @@ public class CalcException : Exception
     public int Position { get; }
 }
 
+[RequiresUnreferencedCode("This class uses dynamic types which are incompatible with trimming")]
 public class ExpressionCalculator
 {
     public enum TokenType

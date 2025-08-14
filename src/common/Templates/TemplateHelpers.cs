@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 public static class TemplateHelpers
 {
+    [RequiresUnreferencedCode("Uses ExpressionCalculator which requires dynamic types")]
     public static string ProcessTemplate(string template, INamedValues values)
     {
         var calculator = new ExpressionCalculator();

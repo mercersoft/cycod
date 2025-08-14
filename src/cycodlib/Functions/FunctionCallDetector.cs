@@ -52,7 +52,7 @@ namespace Cycodlib.Functions
                     {
                         _logger.WriteDebug($"Function call partial arguments: {functionCall.Arguments}");
                         call.ArgumentsBuilder ??= new StringBuilder();
-                        call.ArgumentsBuilder.Append(JsonSerializer.Serialize(functionCall.Arguments));
+                        call.ArgumentsBuilder.Append(JsonSerializer.Serialize(functionCall.Arguments, CycodlibJsonContext.Default.Object));
                         _logger.WriteDebug($"Function call arguments in full thus far: {call.ArgumentsBuilder}");
                     }
                     
@@ -98,7 +98,7 @@ namespace Cycodlib.Functions
         public FunctionCallContent CreateFunctionCallContent(ReadyToCallFunctionCall call)
         {
             // Parse the arguments from JSON string to dictionary
-            var arguments = JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Arguments);
+            var arguments = JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Arguments, CycodlibJsonContext.Default.DictionaryStringObject);
             
             // Create a function call content
             return new FunctionCallContent(call.CallId, call.Name, arguments);
@@ -145,7 +145,7 @@ namespace Cycodlib.Functions
     {
         public static FunctionCallContent AsAIContent(this FunctionCallDetector.ReadyToCallFunctionCall call)
         {
-            var arguments = JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Arguments);
+            var arguments = JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Arguments, CycodlibJsonContext.Default.DictionaryStringObject);
             return new FunctionCallContent(call.CallId, call.Name, arguments);
         }
 

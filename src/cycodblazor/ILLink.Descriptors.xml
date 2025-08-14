@@ -26,8 +26,8 @@
   <!-- Preserve blazor services -->
   <assembly fullname="cycodblazor">
     <type fullname="cycodblazor.Services.ChatService" preserve="all" />
-    <type fullname="cycodblazor.Services.BlazorLogger" preserve="all" />
-    <type fullname="cycodblazor.Services.BrowserStorageProvider" preserve="all" />
-    <type fullname="cycodblazor.Services.BlazorConfigurationProvider" preserve="all" />
+    <type fullname="Cycodblazor.Services.BlazorLogger" preserve="all" />
+    <type fullname="Cycodblazor.Services.BrowserStorageProvider" preserve="all" />
+    <type fullname="Cycodblazor.Services.BlazorConfigurationProvider" preserve="all" />
   </assembly>
 </linker>

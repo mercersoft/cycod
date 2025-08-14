@@ -249,21 +249,21 @@ namespace Cycodlib.Chat
         {
             // Implementation would depend on the specific format
             // This is a placeholder - actual implementation would need the specific serialization logic
-            return JsonSerializer.Deserialize<List<ChatMessage>>(content) ?? new List<ChatMessage>();
+            return JsonSerializer.Deserialize<List<ChatMessage>>(content, CycodlibJsonContext.Default.ListChatMessage) ?? new List<ChatMessage>();
         }
 
         private static string SerializeChatHistory(List<ChatMessage> messages, bool useOpenAIFormat)
         {
             // Implementation would depend on the specific format
             // This is a placeholder - actual implementation would need the specific serialization logic
-            return JsonSerializer.Serialize(messages, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(messages, CycodlibIndentedJsonContext.Default.ListChatMessage);
         }
 
         private static string SerializeTrajectory(List<ChatMessage> messages, bool useOpenAIFormat)
         {
             // Implementation would depend on the specific trajectory format
             // This is a placeholder - actual implementation would need the specific serialization logic
-            return JsonSerializer.Serialize(messages, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(messages, CycodlibIndentedJsonContext.Default.ListChatMessage);
         }
 
         public async ValueTask DisposeAsync()

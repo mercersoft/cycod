@@ -189,12 +189,12 @@
             allLogs.RemoveAt(0);
         }
 
-        InvokeAsync(() =>
+        InvokeAsync(async () =>
         {
             StateHasChanged();
             if (AutoScroll)
             {
-                ScrollToBottom();
+                await ScrollToBottom();
             }
         });
     }

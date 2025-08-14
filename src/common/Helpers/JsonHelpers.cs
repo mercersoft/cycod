@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Common.Helpers;
 
 public static class JsonHelpers
 {
@@ -9,7 +10,7 @@ public static class JsonHelpers
 
         try
         {
-            var jsonElement = JsonSerializer.Deserialize<JsonElement>(json);
+            var jsonElement = JsonSerializer.Deserialize<JsonElement>(json, CommonJsonContext.Default.JsonElement);
             
             // Check if the JSON is an object and has the specified property
             if (jsonElement.ValueKind == JsonValueKind.Object && 

@@ -6,7 +6,9 @@ namespace cycodblazor;
 
 public static class Api
 {
+#pragma warning disable CS0649 // Field is never assigned to - intentionally null for mock implementation
   private static ChatService? _chatService;
+#pragma warning restore CS0649
 
   // This method is callable from JS as DotNet.invokeMethodAsync('cycodblazor', 'Version')
   [JSInvokable(nameof(Version))]
