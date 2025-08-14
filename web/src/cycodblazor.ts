@@ -316,7 +316,7 @@ export class StreamingChatCallback {
     }
   }
   
-  async OnFunctionCallApproval(functionName: string, functionArgs: string | null): Promise<boolean> {
+  async OnFunctionCallApproval(_functionName: string, _functionArgs: string | null): Promise<boolean> {
     // For now, auto-approve all function calls
     // In a real implementation, you'd show a dialog to the user
     return true;
