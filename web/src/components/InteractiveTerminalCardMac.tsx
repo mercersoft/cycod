@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import type { TerminalAPI } from '@/types/terminal';
 
 interface CommandOutput {
   command: string;
@@ -31,6 +32,8 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
   const isProcessingRef = useRef<boolean>(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [prompt, setPrompt] = useState<string>('$ ');
+  const commandHandlerRef = useRef<(input: string, addOutput: (text: string) => void, endOutput: () => void) => void>(onCommand);
   const terminalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isResizingRef = useRef<boolean>(false);
@@ -44,6 +47,102 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [history]);
+
+  // Expose terminal API to window
+  useEffect(() => {
+    const terminalAPI: TerminalAPI = {
+      setPrompt: (newPrompt: string) => setPrompt(newPrompt),
+      getPrompt: () => prompt,
+      commandHandler: async (input: string) => {
+        // Create a promise-based wrapper for the command execution
+        return new Promise<void>((resolve) => {
+          const addOutput = (text: string) => {
+            setHistory(prev => {
+              const updated = [...prev];
+              const lastEntry = updated[updated.length - 1];
+              if (lastEntry && lastEntry.isStreaming) {
+                lastEntry.output = [...lastEntry.output, text];
+              }
+              return updated;
+            });
+          };
+
+          const endOutput = () => {
+            setHistory(prev => {
+              const updated = [...prev];
+              const lastEntry = updated[updated.length - 1];
+              if (lastEntry) {
+                lastEntry.isStreaming = false;
+              }
+              return updated;
+            });
+            resolve();
+          };
+
+          // Use the ref to get the current handler
+          commandHandlerRef.current(input, addOutput, endOutput);
+        });
+      }
+    };
+
+    // Override the commandHandler property to allow dynamic updates
+    Object.defineProperty(terminalAPI, 'commandHandler', {
+      get() {
+        return async (input: string) => {
+          // Create new command entry
+          const newEntry: CommandOutput = {
+            command: '',
+            output: [],
+            isStreaming: true
+          };
+          
+          setHistory(prev => [...prev, newEntry]);
+
+          return new Promise<void>((resolve) => {
+            const addOutput = (text: string) => {
+              setHistory(prev => {
+                const updated = [...prev];
+                const lastEntry = updated[updated.length - 1];
+                if (lastEntry && lastEntry.isStreaming) {
+                  lastEntry.output = [...lastEntry.output, text];
+                }
+                return updated;
+              });
+            };
+
+            const endOutput = () => {
+              setHistory(prev => {
+                const updated = [...prev];
+                const lastEntry = updated[updated.length - 1];
+                if (lastEntry) {
+                  lastEntry.isStreaming = false;
+                }
+                return updated;
+              });
+              setIsProcessing(false);
+              isProcessingRef.current = false;
+              resolve();
+            };
+
+            commandHandlerRef.current(input, addOutput, endOutput);
+          });
+        };
+      },
+      set(handler: (input: string, addOutput: (text: string) => void, endOutput: () => void) => void) {
+        commandHandlerRef.current = handler;
+      },
+      configurable: true
+    });
+
+    window.terminal = terminalAPI;
+
+    return () => {
+      // Clean up on unmount
+      if (window.terminal === terminalAPI) {
+        delete window.terminal;
+      }
+    };
+  }, [prompt]);
 
   // Focus input when clicking anywhere in the terminal
   const handleTerminalClick = () => {
@@ -140,8 +239,8 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
         }, 0);
       };
 
-      // Call the callback with command and response handlers
-      onCommand(cmd, addOutput, endOutput);
+      // Call the current command handler
+      commandHandlerRef.current(cmd, addOutput, endOutput);
     }
   };
 
@@ -241,7 +340,7 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
             <div className="flex items-start">
               <span className="text-green-400 mr-2">{username}@{hostname}</span>
               <span className="text-cyan-400 mr-2">{currentPath}</span>
-              <span className="text-yellow-400 mr-2">$</span>
+              <span className="text-yellow-400 mr-2">{entry.command ? '$ ' : ''}</span>
               <span className="text-white">{entry.command}</span>
             </div>
             
@@ -277,7 +376,7 @@ const InteractiveTerminalCardMac: React.FC<InteractiveTerminalCardMacProps> = ({
           <div className="flex items-start">
             <span className="text-green-400 mr-2">{username}@{hostname}</span>
             <span className="text-cyan-400 mr-2">{currentPath}</span>
-            <span className="text-yellow-400 mr-2">$</span>
+            <span className="text-yellow-400 mr-2">{prompt}</span>
             <div className="flex-1 relative">
               <input
                 ref={inputRef}

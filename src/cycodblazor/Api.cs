@@ -152,7 +152,7 @@ public static class Api
           HistoryPersistence = true,
           ApprovalWorkflow = true
         },
-        Version = "1.0.0"
+        Version = "1.0.0 (Blazor WebAssembly)"
       };
       return JsonSerializer.Serialize(status);
     }

@@ -49,6 +49,11 @@ rm -f web/public/*.staticwebassets.endpoints.json
 mkdir -p web/dist/_framework
 cp -r web/public/_framework/* web/dist/_framework/
 
+# Copy Azure Static Web Apps config to dist if it exists
+if [ -f "web/public/staticwebapp.config.json" ]; then
+  cp web/public/staticwebapp.config.json web/dist/
+fi
+
 # Show final size
 echo "Final web deployment size:"
 du -sh web/dist web/public
