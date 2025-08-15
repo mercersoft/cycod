@@ -6,9 +6,7 @@ namespace cycodblazor;
 
 public static class Api
 {
-#pragma warning disable CS0649 // Field is never assigned to - intentionally null for mock implementation
   private static ChatService? _chatService;
-#pragma warning restore CS0649
 
   // This method is callable from JS as DotNet.invokeMethodAsync('cycodblazor', 'Version')
   [JSInvokable(nameof(Version))]
@@ -28,14 +26,18 @@ public static class Api
   {
     try
     {
-      // For now, just return success without actually initializing ChatService
-      // to get basic functionality working again
-      var response = new StandardResponse { Success = true, Message = "Chat initialized successfully (mock)" };
+      // Create a new ChatService instance
+      _chatService = new ChatService();
+      
+      // Initialize the chat asynchronously and wait for completion
+      _chatService.InitializeChatAsync(systemPrompt, maxTokens).GetAwaiter().GetResult();
+      
+      var response = new StandardResponse { Success = true, Message = "Chat initialized successfully" };
       return JsonSerializer.Serialize(response);
     }
     catch (Exception ex)
     {
-      var errorResponse = new ErrorResponse { Success = false, Error = $"InitializeChat error: {ex.Message} | Stack: {ex.StackTrace}" };
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
       return JsonSerializer.Serialize(errorResponse);
     }
   }
@@ -46,8 +48,11 @@ public static class Api
   {
     try
     {
-      // Mock response for testing
-      var messageResponse = new MessageResponse { Success = true, Response = $"Mock response to: {message}" };
+      if (_chatService == null)
+        throw new InvalidOperationException("Chat service not initialized. Call InitializeChat first.");
+
+      var response = _chatService.SendMessageAsync(message).GetAwaiter().GetResult();
+      var messageResponse = new MessageResponse { Success = true, Response = response };
       return JsonSerializer.Serialize(messageResponse);
     }
     catch (Exception ex)

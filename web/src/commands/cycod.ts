@@ -150,7 +150,16 @@ async function handleChatCommand(args: string[], addOutput: (text: string) => vo
           'You are a helpful AI assistant. Provide clear, concise, and accurate responses.'
         )
         if (!initResult.Success) {
-          addOutput(`Error initializing chat: ${initResult.Error || 'Unknown error'}`)
+          const errorMessage = initResult.Error || 'Unknown error'
+          // Split error message by newlines to preserve formatting
+          const lines = errorMessage.split('\n')
+          if (lines.length > 1) {
+            // Multi-line error message, output each line separately
+            lines.forEach(line => addOutput(line))
+          } else {
+            // Single line error message
+            addOutput(`Error initializing chat: ${errorMessage}`)
+          }
           endOutput()
           return
         }

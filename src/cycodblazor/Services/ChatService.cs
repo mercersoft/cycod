@@ -193,18 +193,10 @@ public class ChatService : IAsyncDisposable
 
     private IChatClient CreateChatClient()
     {
-        // TODO: Implement proper chat client configuration
-        // This will need to be configured based on the available AI service
-        // For now, returning a placeholder that will need to be replaced
-        
-        // Example configurations might include:
-        // - OpenAI client with API key
-        // - Azure OpenAI client
-        // - Local model client
-        // - Mock client for testing
-        
-        throw new NotImplementedException("Chat client configuration not yet implemented. " +
-            "This needs to be configured with an actual AI service (OpenAI, Azure OpenAI, etc.)");
+        // Use the lightweight Blazor-specific chat client factory
+        // This will check environment variables and throw detailed error messages
+        // without pulling in heavy dependencies that don't work in WebAssembly
+        return BlazorChatClientFactory.CreateChatClient();
     }
 
     public async ValueTask DisposeAsync()
