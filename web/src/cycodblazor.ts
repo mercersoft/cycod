@@ -372,3 +372,75 @@ export async function sendMessageStreaming(
   callback.dispose();
   throw lastErr ?? new Error('Unknown error calling sendMessageStreaming()')
 }
+
+export async function setConfig(key: string, value: string): Promise<{ Success: boolean; Message?: string; Error?: string }> {
+  await ensureStarted();
+  let lastErr: unknown = undefined
+  for (let i = 0; i < 10; i++) {
+    try {
+      if (!window.DotNet || typeof window.DotNet.invokeMethodAsync !== 'function') {
+        throw new Error('DotNet.invokeMethodAsync not available yet');
+      }
+      const result = await window.DotNet.invokeMethodAsync("cycodblazor", "SetConfig", key, value);
+      return JSON.parse(result);
+    } catch (e) {
+      lastErr = e
+      await delay(50)
+    }
+  }
+  throw lastErr ?? new Error('Unknown error calling setConfig()')
+}
+
+export async function getConfig(key: string): Promise<{ Success: boolean; Value?: string; Error?: string }> {
+  await ensureStarted();
+  let lastErr: unknown = undefined
+  for (let i = 0; i < 10; i++) {
+    try {
+      if (!window.DotNet || typeof window.DotNet.invokeMethodAsync !== 'function') {
+        throw new Error('DotNet.invokeMethodAsync not available yet');
+      }
+      const result = await window.DotNet.invokeMethodAsync("cycodblazor", "GetConfig", key);
+      return JSON.parse(result);
+    } catch (e) {
+      lastErr = e
+      await delay(50)
+    }
+  }
+  throw lastErr ?? new Error('Unknown error calling getConfig()')
+}
+
+export async function listConfig(): Promise<{ Success: boolean; Items?: Array<{key: string, value: string}>; Error?: string }> {
+  await ensureStarted();
+  let lastErr: unknown = undefined
+  for (let i = 0; i < 10; i++) {
+    try {
+      if (!window.DotNet || typeof window.DotNet.invokeMethodAsync !== 'function') {
+        throw new Error('DotNet.invokeMethodAsync not available yet');
+      }
+      const result = await window.DotNet.invokeMethodAsync("cycodblazor", "ListConfig");
+      return JSON.parse(result);
+    } catch (e) {
+      lastErr = e
+      await delay(50)
+    }
+  }
+  throw lastErr ?? new Error('Unknown error calling listConfig()')
+}
+
+export async function clearConfig(key?: string): Promise<{ Success: boolean; Message?: string; Error?: string }> {
+  await ensureStarted();
+  let lastErr: unknown = undefined
+  for (let i = 0; i < 10; i++) {
+    try {
+      if (!window.DotNet || typeof window.DotNet.invokeMethodAsync !== 'function') {
+        throw new Error('DotNet.invokeMethodAsync not available yet');
+      }
+      const result = await window.DotNet.invokeMethodAsync("cycodblazor", "ClearConfig", key || null);
+      return JSON.parse(result);
+    } catch (e) {
+      lastErr = e
+      await delay(50)
+    }
+  }
+  throw lastErr ?? new Error('Unknown error calling clearConfig()')
+}

@@ -1,8 +1,137 @@
 import type { CommandDefinition } from './types'
-import { version, testChat, initializeChat, sendMessage, sendMessageStreaming, clearChatHistory, getChatStatus, saveChatHistory, loadChatHistory } from '@/cycodblazor'
+import { version, testChat, initializeChat, sendMessage, sendMessageStreaming, clearChatHistory, getChatStatus, saveChatHistory, loadChatHistory, setConfig, getConfig, listConfig, clearConfig } from '@/cycodblazor'
 
 let chatActive = false
 let chatInitialized = false
+
+// Function to mask API keys for security display
+function maskApiKey(key: string, value: string): string {
+  // Check if this looks like an API key (contains "key", "token", "secret", or "password")
+  // Use more flexible matching for dotted notation like "openai.apikey"
+  const isApiKey = /(key|token|secret|password)/i.test(key)
+  
+  if (isApiKey && value && value.length > 4) {
+    // Show first 2 and last 2 characters, mask the rest
+    const first2 = value.substring(0, 2)
+    const last2 = value.substring(value.length - 2)
+    const maskLength = Math.max(value.length - 4, 4) // At least 4 stars
+    const masked = '*'.repeat(maskLength)
+    return `${first2}${masked}${last2}`
+  }
+  
+  // Return original value for non-sensitive keys
+  return value
+}
+
+async function handleConfigCommand(args: string[], addOutput: (text: string) => void, endOutput: () => void) {
+  try {
+    const subCommand = args[0]
+    
+    if (subCommand === '--help' || subCommand === '-h') {
+      addOutput('Config commands:')
+      addOutput('  cycod config set KEY VALUE     Set configuration value')
+      addOutput('  cycod config get KEY           Get configuration value')
+      addOutput('  cycod config list              List all configuration')
+      addOutput('  cycod config clear [KEY]       Clear specific key or all config')
+      addOutput('')
+      addOutput('Examples:')
+      addOutput('  cycod config set ANTHROPIC_API_KEY sk-ant-1234...')
+      addOutput('  cycod config set OPENAI_API_KEY sk-1234...')
+      addOutput('  cycod config get ANTHROPIC_API_KEY')
+      addOutput('  cycod config list')
+      addOutput('  cycod config clear ANTHROPIC_API_KEY')
+      endOutput()
+      return
+    }
+    
+    if (subCommand === 'set') {
+      const key = args[1]
+      const value = args[2]
+      if (!key || !value) {
+        addOutput('Error: Both key and value are required')
+        addOutput('Usage: cycod config set KEY VALUE')
+        endOutput()
+        return
+      }
+      
+      // Call the Blazor API to set config
+      const result = await setConfig(key, value)
+      if (result.Success) {
+        addOutput(`Configuration set: ${key}`)
+      } else {
+        addOutput(`Error setting config: ${result.Error || 'Unknown error'}`)
+      }
+      endOutput()
+      return
+    }
+    
+    if (subCommand === 'get') {
+      const key = args[1]
+      if (!key) {
+        addOutput('Error: Key is required')
+        addOutput('Usage: cycod config get KEY')
+        endOutput()
+        return
+      }
+      
+      // Call the Blazor API to get config
+      const result = await getConfig(key)
+      if (result.Success && result.Value) {
+        addOutput(`${key}=${result.Value}`)
+      } else {
+        addOutput(`Configuration not found: ${key}`)
+      }
+      endOutput()
+      return
+    }
+    
+    if (subCommand === 'list') {
+      // Call the Blazor API to list all config
+      const result = await listConfig()
+      if (result.Success && result.Items) {
+        if (result.Items.length === 0) {
+          addOutput('No configuration found')
+        } else {
+          addOutput('Configuration:')
+          result.Items.forEach((item: any) => {
+            const displayValue = maskApiKey(item.Key, item.Value)
+            addOutput(`  ${item.Key}=${displayValue}`)
+          })
+        }
+      } else {
+        addOutput(`Error listing config: ${result.Error || 'Unknown error'}`)
+      }
+      endOutput()
+      return
+    }
+    
+    if (subCommand === 'clear') {
+      const key = args[1]
+      
+      // Call the Blazor API to clear config
+      const result = await clearConfig(key)
+      if (result.Success) {
+        if (key) {
+          addOutput(`Configuration cleared: ${key}`)
+        } else {
+          addOutput('All configuration cleared')
+        }
+      } else {
+        addOutput(`Error clearing config: ${result.Error || 'Unknown error'}`)
+      }
+      endOutput()
+      return
+    }
+    
+    // Unknown subcommand
+    addOutput(`Unknown config command: ${subCommand}`)
+    addOutput('Run "cycod config --help" for usage information')
+    endOutput()
+  } catch (error) {
+    addOutput(`Error: ${error}`)
+    endOutput()
+  }
+}
 
 function showHelp(addOutput: (text: string) => void, versionString?: string) {
   addOutput(versionString ? `CycoAI CLI v${versionString}` : 'CycoAI CLI')
@@ -338,6 +467,8 @@ export const cycodCommand: CommandDefinition = {
         .finally(() => endOutput())
     } else if (words[1] === 'chat') {
       handleChatCommand(words.slice(2), addOutput, endOutput)
+    } else if (words[1] === 'config') {
+      handleConfigCommand(words.slice(2), addOutput, endOutput)
     } else if (words[1] === 'help' || words[1] === '--help' || words[1] === '-h') {
       // Show help with actual version and complete command list
       version()

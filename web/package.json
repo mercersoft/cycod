@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "vite",
     "clean": "rm -rf dist && rm -rf public/_framework && rm -rf public/blazor",
-    "build": "npm run clean && tsc -b && vite build",
-    "build:optimize": "npm run clean && tsc -b && vite build --mode production",
+    "build": "npm run clean && tsc -b && cd .. && ./publish_blazor.sh && cd web && vite build",
+    "build:optimize": "npm run clean && tsc -b && cd .. && ./publish_blazor.sh && cd web && vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview",
     "firestore:deploy": "firebase deploy --project $FIREBASE_PROJECT_ID --only firestore --force",
