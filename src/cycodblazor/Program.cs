@@ -19,7 +19,16 @@ builder.Services.AddSingleton<IStorageProvider>(provider =>
 
 builder.Services.AddSingleton<Cycodlib.Abstractions.IConfigurationProvider, BlazorConfigurationProvider>();
 
+// Register ChatService with proper DI
+builder.Services.AddSingleton<cycodblazor.Services.ChatService>();
+
 // Note: IShellExecutor is not available in Blazor WebAssembly due to security restrictions
 
+// Build and configure the application
+var app = builder.Build();
+
+// Set up service provider for static API access
+cycodblazor.Api.SetServiceProvider(app.Services);
+
 // No root components registered — this stays headless.
-await builder.Build().RunAsync();
+await app.RunAsync();

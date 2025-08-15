@@ -15,11 +15,23 @@ public class ChatService : IAsyncDisposable
     private readonly FunctionFactory _functionFactory;
     private IChatClient? _chatClient;
 
+    public ChatService(IJSRuntime jsRuntime, Cycodlib.Abstractions.ILogger logger, IStorageProvider storageProvider)
+    {
+        // Use dependency injection for all services
+        _logger = logger;
+        _storageProvider = storageProvider;
+        _functionFactory = new FunctionFactory(_logger);
+        
+        // Chat client will be configured during initialization
+        _chatClient = null;
+    }
+
+    // Parameterless constructor for backwards compatibility (fallback to manual creation)
     public ChatService()
     {
-        // Initialize dependencies - these will be properly injected later
+        // Initialize dependencies manually when DI is not available
         _logger = CreateLogger();
-        _storageProvider = CreateStorageProvider();
+        _storageProvider = CreateStorageProvider(null);
         _functionFactory = new FunctionFactory(_logger);
         
         // Chat client will be configured during initialization
@@ -184,19 +196,24 @@ public class ChatService : IAsyncDisposable
         return new SimpleConsoleLogger();
     }
 
-    private IStorageProvider CreateStorageProvider()
+    private IStorageProvider CreateStorageProvider(IJSRuntime? jsRuntime)
     {
-        // For now, create a simple in-memory storage provider
-        // This should be replaced with proper browser storage when JSRuntime is available
-        return new InMemoryStorageProvider();
+        if (jsRuntime != null)
+        {
+            // Use persistent browser storage when JSRuntime is available
+            return new Cycodblazor.Services.BrowserStorageProvider(jsRuntime);
+        }
+        else
+        {
+            // Fallback to in-memory storage when JSRuntime is not available
+            return new InMemoryStorageProvider();
+        }
     }
 
     private IChatClient CreateChatClient()
     {
-        // Use the lightweight Blazor-specific chat client factory
-        // This will check environment variables and throw detailed error messages
-        // without pulling in heavy dependencies that don't work in WebAssembly
-        return BlazorChatClientFactory.CreateChatClient();
+        // Use the Blazor-specific chat client factory that reads from browser storage
+        return BlazorChatClientFactory.CreateChatClient(_storageProvider);
     }
 
     public async ValueTask DisposeAsync()

@@ -1,12 +1,19 @@
 using Microsoft.JSInterop;
 using System.Text.Json;
 using cycodblazor.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace cycodblazor;
 
 public static class Api
 {
   private static ChatService? _chatService;
+  private static IServiceProvider? _serviceProvider;
+
+  public static void SetServiceProvider(IServiceProvider serviceProvider)
+  {
+    _serviceProvider = serviceProvider;
+  }
 
   // This method is callable from JS as DotNet.invokeMethodAsync('cycodblazor', 'Version')
   [JSInvokable(nameof(Version))]
@@ -26,8 +33,16 @@ public static class Api
   {
     try
     {
-      // Create a new ChatService instance
-      _chatService = new ChatService();
+      // Get ChatService from DI container, fallback to manual creation
+      if (_serviceProvider != null)
+      {
+        _chatService = _serviceProvider.GetRequiredService<ChatService>();
+      }
+      else
+      {
+        // Fallback to manual creation when DI is not available
+        _chatService = new ChatService();
+      }
       
       // Initialize the chat asynchronously and wait for completion
       _chatService.InitializeChatAsync(systemPrompt, maxTokens).GetAwaiter().GetResult();
@@ -174,6 +189,158 @@ public static class Api
       return JsonSerializer.Serialize(errorResponse);
     }
   }
+
+  // Set configuration value
+  [JSInvokable(nameof(SetConfig))]
+  public static async Task<string> SetConfig(string key, string value)
+  {
+    try
+    {
+      // Get storage provider from DI and store the config value
+      if (_serviceProvider != null)
+      {
+        var storageProvider = _serviceProvider.GetRequiredService<Cycodlib.Abstractions.IStorageProvider>();
+        await storageProvider.WriteTextAsync($"config/{key}", value);
+      }
+      
+      var response = new StandardResponse { Success = true, Message = $"Configuration set: {key}" };
+      return JsonSerializer.Serialize(response);
+    }
+    catch (Exception ex)
+    {
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
+      return JsonSerializer.Serialize(errorResponse);
+    }
+  }
+
+  // Get configuration value
+  [JSInvokable(nameof(GetConfig))]
+  public static async Task<string> GetConfig(string key)
+  {
+    try
+    {
+      string? value = null;
+      
+      // Get storage provider from DI and read the config value
+      if (_serviceProvider != null)
+      {
+        var storageProvider = _serviceProvider.GetRequiredService<Cycodlib.Abstractions.IStorageProvider>();
+        value = await storageProvider.ReadTextAsync($"config/{key}");
+      }
+      
+      if (value != null)
+      {
+        var response = new ConfigValueResponse { Success = true, Value = value };
+        return JsonSerializer.Serialize(response);
+      }
+      else
+      {
+        var response = new ConfigValueResponse { Success = false, Error = $"Configuration not found: {key}" };
+        return JsonSerializer.Serialize(response);
+      }
+    }
+    catch (Exception ex)
+    {
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
+      return JsonSerializer.Serialize(errorResponse);
+    }
+  }
+
+  // List all configuration
+  [JSInvokable(nameof(ListConfig))]
+  public static async Task<string> ListConfig()
+  {
+    try
+    {
+      var items = new List<ConfigItem>();
+      
+      // Get storage provider from DI and list all config values
+      if (_serviceProvider != null)
+      {
+        var storageProvider = _serviceProvider.GetRequiredService<Cycodlib.Abstractions.IStorageProvider>();
+        var configKeys = await storageProvider.ListFilesAsync("config/");
+        
+        foreach (var configPath in configKeys)
+        {
+          var key = configPath.Substring("config/".Length); // Remove config/ prefix
+          var value = await storageProvider.ReadTextAsync(configPath);
+          
+          if (value != null)
+          {
+            items.Add(new ConfigItem { Key = key, Value = value });
+          }
+        }
+      }
+      
+      var response = new ConfigListResponse { Success = true, Items = items };
+      return JsonSerializer.Serialize(response);
+    }
+    catch (Exception ex)
+    {
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
+      return JsonSerializer.Serialize(errorResponse);
+    }
+  }
+
+  // Clear configuration
+  [JSInvokable(nameof(ClearConfig))]
+  public static async Task<string> ClearConfig(string? key = null)
+  {
+    try
+    {
+      // Get storage provider from DI and clear config
+      if (_serviceProvider != null)
+      {
+        var storageProvider = _serviceProvider.GetRequiredService<Cycodlib.Abstractions.IStorageProvider>();
+        
+        if (key != null)
+        {
+          // Clear specific key
+          await storageProvider.DeleteAsync($"config/{key}");
+        }
+        else
+        {
+          // Clear all config - list all keys and delete them
+          var configKeys = await storageProvider.ListFilesAsync("config/");
+          
+          foreach (var configPath in configKeys)
+          {
+            await storageProvider.DeleteAsync(configPath);
+          }
+        }
+      }
+      
+      var message = key != null ? $"Configuration cleared: {key}" : "All configuration cleared";
+      var response = new StandardResponse { Success = true, Message = message };
+      return JsonSerializer.Serialize(response);
+    }
+    catch (Exception ex)
+    {
+      var errorResponse = new ErrorResponse { Success = false, Error = ex.Message };
+      return JsonSerializer.Serialize(errorResponse);
+    }
+  }
+}
+
+// Additional response classes for config operations
+public class ConfigValueResponse
+{
+  public bool Success { get; set; }
+  public string? Value { get; set; }
+  public string? Error { get; set; }
+}
+
+public class ConfigListResponse
+{
+  public bool Success { get; set; }
+  public List<ConfigItem>? Items { get; set; }
+  public string? Error { get; set; }
+}
+
+public class ConfigItem
+{
+  public string Key { get; set; } = "";
+  public string Value { get; set; } = "";
 }
 
 // Callback class for streaming responses and function calling
