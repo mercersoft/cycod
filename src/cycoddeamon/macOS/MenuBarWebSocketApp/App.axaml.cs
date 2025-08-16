@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using MenuBarWebSocketApp.Services;
 using MenuBarWebSocketApp.Views;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MenuBarWebSocketApp;
@@ -67,47 +68,77 @@ public partial class App : Application
             _webSocketServer.OnActivityLogged += (message) => {
                 // Dispatch UI updates to the main thread
                 Dispatcher.UIThread.InvokeAsync(() => {
-                    UpdateTrayIcon(_webSocketServer.IsRunning, _webSocketServer.ActiveConnections);
+                    UpdateTrayIcon(_webSocketServer.CurrentState);
                 });
             };
             
-            UpdateTrayIcon(true, 0);
+            // Subscribe to state changes for immediate icon updates
+            _webSocketServer.OnStateChanged += (state) => {
+                // Dispatch UI updates to the main thread
+                Dispatcher.UIThread.InvokeAsync(() => {
+                    UpdateTrayIcon(state);
+                });
+            };
+            
+            Console.WriteLine($"[STARTUP] WebSocket server started successfully");
+            Console.WriteLine($"[STARTUP] Initial state: {_webSocketServer.CurrentState}");
+            UpdateTrayIcon(_webSocketServer.CurrentState);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to start WebSocket server: {ex.Message}");
-            UpdateTrayIcon(false, 0);
+            UpdateTrayIcon(ServerState.Error);
         }
     }
 
-    private void UpdateTrayIcon(bool isRunning, int activeConnections = 0)
+    private void UpdateTrayIcon(ServerState state)
     {
         if (_trayIcon != null)
         {
-            // Update icon based on connection state
-            string iconPath = activeConnections > 0 
-                ? "avares://MenuBarWebSocketApp/Assets/icon-connected.png"
-                : isRunning 
-                    ? "avares://MenuBarWebSocketApp/Assets/icon-running.png"
-                    : "avares://MenuBarWebSocketApp/Assets/icon.png";
-                    
-            _trayIcon.Icon = new WindowIcon(AssetLoader.Open(new Uri(iconPath)));
+            // Update icon based on server state
+            string iconPath = state switch
+            {
+                ServerState.Stopped => "avares://MenuBarWebSocketApp/Assets/icon.png",
+                ServerState.Running => "avares://MenuBarWebSocketApp/Assets/icon.png", 
+                ServerState.Connected => "avares://MenuBarWebSocketApp/Assets/icon-connected.png",
+                ServerState.Started => "avares://MenuBarWebSocketApp/Assets/icon-running.png", // Use running icon when started
+                ServerState.Error => "avares://MenuBarWebSocketApp/Assets/icon.png", // Use base icon for error
+                _ => "avares://MenuBarWebSocketApp/Assets/icon.png"
+            };
             
-            // Update tooltip with enhanced information
-            if (isRunning)
+            // Debug output for icon updates
+            Console.WriteLine($"[ICON UPDATE] State: {state}, Icon: {iconPath.Split('/').Last()}");
+            
+            try
             {
-                _trayIcon.ToolTipText = activeConnections > 0
-                    ? $"🟢 WebSocket Server - {activeConnections} active connection{(activeConnections == 1 ? "" : "s")}\n" +
-                      $"Port: {_webSocketServer?.Port ?? 6464}\n" +
-                      $"Status: Connected"
-                    : $"🟡 WebSocket Server - Running\n" +
-                      $"Port: {_webSocketServer?.Port ?? 6464}\n" +
-                      $"Status: Waiting for connections";
+                // Force icon refresh by creating new WindowIcon instance
+                var iconStream = AssetLoader.Open(new Uri(iconPath));
+                var newIcon = new WindowIcon(iconStream);
+                _trayIcon.Icon = newIcon;
+                Console.WriteLine($"[ICON UPDATE] Successfully loaded icon: {iconPath.Split('/').Last()}");
             }
-            else
+            catch (Exception ex)
             {
-                _trayIcon.ToolTipText = "🔴 WebSocket Server - Stopped";
+                Console.WriteLine($"[ICON ERROR] Failed to load icon {iconPath}: {ex.Message}");
             }
+            
+            // Update tooltip with state information
+            var (emoji, statusText, description) = state switch
+            {
+                ServerState.Stopped => ("🔴", "Stopped", "Server is not running"),
+                ServerState.Running => ("⚪", "Running", "Server running, waiting for connections"),
+                ServerState.Connected => ("🟡", "Connected", "Active connections, no start command"),
+                ServerState.Started => ("🟢", "Started", "Active connections, start command received"),
+                ServerState.Error => ("❌", "Error", "An error occurred"),
+                _ => ("❓", "Unknown", "Unknown state")
+            };
+            
+            _trayIcon.ToolTipText = $"{emoji} WebSocket Server - {statusText}\n" +
+                                  $"Port: {_webSocketServer?.Port ?? 6464}\n" +
+                                  $"Connections: {_webSocketServer?.ActiveConnections ?? 0}\n" +
+                                  $"Status: {description}";
+                                  
+            Console.WriteLine($"[TOOLTIP] {emoji} {statusText} - Connections: {_webSocketServer?.ActiveConnections ?? 0}");
         }
     }
 

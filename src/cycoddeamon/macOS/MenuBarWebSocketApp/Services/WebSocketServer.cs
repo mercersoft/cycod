@@ -12,6 +12,15 @@ using System.Threading.Tasks;
 
 namespace MenuBarWebSocketApp.Services;
 
+public enum ServerState
+{
+    Stopped,        // Server not running
+    Running,        // Server running, no connections
+    Connected,      // Server running with connections, no start command
+    Started,        // Server running with connections and start command received
+    Error          // Error occurred
+}
+
 public class WebSocketServer
 {
     private WebApplication? _app;
@@ -24,8 +33,10 @@ public class WebSocketServer
     public string AuthToken { get; set; } = "";
     public bool IsRunning { get; private set; }
     public int ActiveConnections => _connections.Count(c => c.Value.IsAuthenticated);
+    public ServerState CurrentState { get; private set; } = ServerState.Stopped;
     
     public event Action<string>? OnActivityLogged;
+    public event Action<ServerState>? OnStateChanged;
 
     public async Task StartAsync()
     {
@@ -57,6 +68,7 @@ public class WebSocketServer
             }
         });
         IsRunning = true;
+        UpdateState();
         
         LogActivity($"Server started on ws://localhost:{Port}");
     }
@@ -79,6 +91,7 @@ public class WebSocketServer
         _cancellationTokenSource?.Dispose();
         _cancellationTokenSource = null;
         IsRunning = false;
+        UpdateState();
         LogActivity("Server stopped");
     }
 
@@ -122,6 +135,8 @@ public class WebSocketServer
         }
         
         LogActivity($"New connection from {origin}");
+        Console.WriteLine($"[CONNECTION] New WebSocket connection: {connectionId} from {origin}");
+        UpdateState(); // Update state when new connection is added
         
         try
         {
@@ -140,6 +155,8 @@ public class WebSocketServer
             {
                 _connections.Remove(connectionId);
             }
+            Console.WriteLine($"[CONNECTION] WebSocket connection closed: {connectionId}");
+            UpdateState(); // Update state when connection is removed
             LogActivity($"Connection closed: {connectionId}");
         }
     }
@@ -198,6 +215,7 @@ public class WebSocketServer
             if (type == "authenticate" && !connection.IsAuthenticated)
             {
                 var token = json.GetProperty("token").GetString();
+                Console.WriteLine($"[AUTH] Authentication attempt from {connection.Id} with token: '{token}'");
                 
                 if (ValidateToken(token, connection.Id))
                 {
@@ -211,6 +229,8 @@ public class WebSocketServer
                     });
                     
                     LogActivity($"Connection authenticated: {connection.Id}");
+                    Console.WriteLine($"[AUTH] Authentication successful for {connection.Id}");
+                    UpdateState(); // Update state when authentication changes
                 }
                 else
                 {
@@ -219,6 +239,7 @@ public class WebSocketServer
                         type = "error",
                         message = "Invalid authentication"
                     });
+                    Console.WriteLine($"[AUTH] Authentication failed for {connection.Id}");
                     await CloseConnection(connection, "Authentication failed");
                 }
                 return;
@@ -267,6 +288,32 @@ public class WebSocketServer
                         type = "version",
                         version = "CycoDev Deamon 1.0.0"
                     });
+                    break;
+                    
+                case "start":
+                    Console.WriteLine($"[START COMMAND] Received from connection {connection.Id}");
+                    connection.IsStarted = true;
+                    UpdateState();
+                    await SendMessage(connection, new
+                    {
+                        type = "started",
+                        message = "Server started successfully"
+                    });
+                    LogActivity("Start command received");
+                    Console.WriteLine($"[START COMMAND] Response sent, connection.IsStarted = {connection.IsStarted}");
+                    break;
+                    
+                case "stop":
+                    Console.WriteLine($"[STOP COMMAND] Received from connection {connection.Id}");
+                    connection.IsStarted = false;
+                    UpdateState();
+                    await SendMessage(connection, new
+                    {
+                        type = "stopped",
+                        message = "Server stopped successfully"
+                    });
+                    LogActivity("Stop command received");
+                    Console.WriteLine($"[STOP COMMAND] Response sent, connection.IsStarted = {connection.IsStarted}");
                     break;
             }
         }
@@ -326,6 +373,39 @@ public class WebSocketServer
     private void LogActivity(string message)
     {
         OnActivityLogged?.Invoke(message);
+    }
+
+    private void UpdateState()
+    {
+        var previousState = CurrentState;
+        
+        if (!IsRunning)
+        {
+            CurrentState = ServerState.Stopped;
+        }
+        else if (ActiveConnections == 0)
+        {
+            CurrentState = ServerState.Running;
+        }
+        else
+        {
+            // Check if any connection has received a start command
+            bool hasStartedConnection = _connections.Values
+                .Any(c => c.IsAuthenticated && c.IsStarted);
+                
+            CurrentState = hasStartedConnection ? ServerState.Started : ServerState.Connected;
+        }
+        
+        // Debug output for state tracking
+        Console.WriteLine($"[DEBUG] UpdateState: Running={IsRunning}, ActiveConnections={ActiveConnections}, CurrentState={CurrentState}");
+        
+        // Notify if state changed
+        if (previousState != CurrentState)
+        {
+            Console.WriteLine($"[STATE CHANGE] {previousState} -> {CurrentState}");
+            OnStateChanged?.Invoke(CurrentState);
+            LogActivity($"State changed from {previousState} to {CurrentState}");
+        }
     }
 
     public async Task BroadcastToAll(object message)

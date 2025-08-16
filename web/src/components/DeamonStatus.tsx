@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react"
 
 interface StatusState {
-  status: 'checking' | 'connected' | 'error'
+  status: 'checking' | 'connected' | 'started' | 'error'
   message: string
   version?: string
   hasServer?: boolean
+  daemonState?: 'stopped' | 'running' | 'connected' | 'started' // Track daemon operational state
 }
 
 export default function DeamonStatus() {
@@ -15,28 +16,31 @@ export default function DeamonStatus() {
   const [ws, setWs] = useState<WebSocket | null>(null)
 
   const handleButtonClick = () => {
-    if (state.status === 'connected' && ws) {
-      // Disconnect
-      ws.close()
-      setWs(null)
-      setState({
-        status: 'error',
-        message: 'Disconnected by user',
-        hasServer: true
-      })
-    } else if (state.hasServer || state.status === 'checking') {
-      // Connect/Refresh
+    if (state.status === 'started' && ws) {
+      // Send stop command to daemon
+      ws.send(JSON.stringify({
+        type: 'stop'
+      }))
+    } else if (state.status === 'connected' && ws) {
+      // Send start command to daemon
+      ws.send(JSON.stringify({
+        type: 'start'
+      }))
+    } else {
+      // Refresh - reconnect to check for server
       connectToServer()
     }
   }
 
   const connectToServer = () => {
+    // Reset state to checking and clear server detection
     setState({
       status: 'checking',
-      message: 'checking ....'
+      message: 'checking ....',
+      hasServer: undefined // Reset server detection
     })
     
-    // Trigger a reconnection by calling the connect logic
+    // Close existing connection if any
     if (ws) {
       ws.close()
       setWs(null)
@@ -103,14 +107,34 @@ export default function DeamonStatus() {
                   status: 'connected',
                   message: data.version,
                   version: data.version,
-                  hasServer: true
+                  hasServer: true,
+                  daemonState: 'connected'
                 })
+                break
+
+              case 'started':
+                setState(prevState => ({
+                  ...prevState,
+                  status: 'started',
+                  message: 'Daemon started and ready for operations',
+                  daemonState: 'started'
+                }))
+                break
+
+              case 'stopped':
+                setState(prevState => ({
+                  ...prevState,
+                  status: 'connected',
+                  message: 'Daemon stopped - ready to start',
+                  daemonState: 'connected'
+                }))
                 break
 
               case 'error':
                 setState({
                   status: 'error',
-                  message: `Server error: ${data.message}`
+                  message: `Server error: ${data.message}`,
+                  hasServer: true
                 })
                 break
 
@@ -137,24 +161,30 @@ export default function DeamonStatus() {
 
         localWs.onclose = (event) => {
           console.log('WebSocket closed:', event.code, event.reason)
-          if (state.status === 'checking') {
-            let errorMessage = 'Connection closed - daemon may not be running'
-            
-            // Provide more specific error messages based on close codes
-            if (event.code === 1006) {
-              errorMessage = 'Connection failed - daemon may not be running or origin not allowed'
-            } else if (event.code === 1002) {
-              errorMessage = 'Protocol error - check daemon configuration'
-            } else if (event.code === 1003) {
-              errorMessage = 'Invalid data received from daemon'
+          // Only update state if it was checking or connected, not if already in error
+          setState(prevState => {
+            if (prevState.status === 'checking' || prevState.status === 'connected' || prevState.status === 'started') {
+              let errorMessage = 'Connection closed - daemon may not be running'
+              
+              // Provide more specific error messages based on close codes
+              if (event.code === 1006) {
+                errorMessage = 'Connection failed - daemon may not be running or origin not allowed'
+              } else if (event.code === 1002) {
+                errorMessage = 'Protocol error - check daemon configuration'
+              } else if (event.code === 1003) {
+                errorMessage = 'Invalid data received from daemon'
+              }
+              
+              return {
+                ...prevState,
+                status: 'error',
+                message: errorMessage,
+                hasServer: false,
+                daemonState: 'stopped'
+              }
             }
-            
-            setState({
-              status: 'error',
-              message: errorMessage,
-              hasServer: false
-            })
-          }
+            return prevState
+          })
         }
 
       } catch (error) {
@@ -187,6 +217,8 @@ export default function DeamonStatus() {
   const getStatusColor = () => {
     switch (state.status) {
       case 'connected':
+        return 'text-yellow-400'
+      case 'started':
         return 'text-green-400'
       case 'error':
         return 'text-red-400'
@@ -196,10 +228,12 @@ export default function DeamonStatus() {
   }
 
   const getButtonText = () => {
-    if (state.status === 'connected') {
-      return 'Disconnect'
-    } else if (state.hasServer || state.status === 'checking') {
-      return state.status === 'checking' ? 'Connecting...' : 'Connect'
+    if (state.status === 'started') {
+      return 'Stop'
+    } else if (state.status === 'connected') {
+      return 'Start'
+    } else if (state.status === 'checking') {
+      return 'Connecting...'
     } else {
       return 'Refresh'
     }
@@ -208,10 +242,12 @@ export default function DeamonStatus() {
   const getButtonStyle = () => {
     const baseStyle = "px-3 py-1 text-sm rounded border transition-colors duration-200"
     
-    if (state.status === 'connected') {
+    if (state.status === 'started') {
       return `${baseStyle} border-red-500 text-red-400 hover:bg-red-500 hover:text-white`
-    } else if (state.hasServer || state.status === 'checking') {
-      return `${baseStyle} border-green-500 text-green-400 hover:bg-green-500 hover:text-white ${state.status === 'checking' ? 'opacity-50 cursor-not-allowed' : ''}`
+    } else if (state.status === 'connected') {
+      return `${baseStyle} border-green-500 text-green-400 hover:bg-green-500 hover:text-white`
+    } else if (state.status === 'checking') {
+      return `${baseStyle} border-gray-500 text-gray-400 opacity-50 cursor-not-allowed`
     } else {
       return `${baseStyle} border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white`
     }

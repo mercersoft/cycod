@@ -9,6 +9,7 @@ public class WebSocketConnection
     public WebSocket Socket { get; set; } = null!;
     public string Origin { get; set; } = "";
     public bool IsAuthenticated { get; set; }
+    public bool IsStarted { get; set; }
     public DateTime ConnectedAt { get; set; }
     public DateTime? LastActivityAt { get; set; }
     public int MessageCount { get; set; }
