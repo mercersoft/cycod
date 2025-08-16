@@ -123,7 +123,9 @@ public class RelayCommand : ICommand
         _canExecute = canExecute;
     }
 
+    #pragma warning disable CS0067 // Event is never used - this is a standard ICommand pattern
     public event EventHandler? CanExecuteChanged;
+    #pragma warning restore CS0067
 
     public bool CanExecute(object? parameter) => _canExecute?.Invoke() ?? true;
     public void Execute(object? parameter) => _execute();

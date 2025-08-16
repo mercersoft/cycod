@@ -38,7 +38,7 @@ public class WebSocketServer
     public event Action<string>? OnActivityLogged;
     public event Action<ServerState>? OnStateChanged;
 
-    public async Task StartAsync()
+    public Task StartAsync()
     {
         _cancellationTokenSource = new CancellationTokenSource();
         
@@ -71,6 +71,8 @@ public class WebSocketServer
         UpdateState();
         
         LogActivity($"Server started on ws://localhost:{Port}");
+        
+        return Task.CompletedTask;
     }
 
     public async Task StopAsync()
