@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useRef, ReactNode, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react'
+import type { ReactNode } from 'react'
 
 interface CommandRequest {
   type: 'command'
@@ -42,6 +43,7 @@ interface WebSocketContextType {
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined)
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useWebSocket() {
   const context = useContext(WebSocketContext)
   if (!context) {
