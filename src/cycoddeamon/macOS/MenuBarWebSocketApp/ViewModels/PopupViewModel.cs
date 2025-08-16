@@ -11,7 +11,7 @@ public class PopupViewModel : INotifyPropertyChanged
 {
     private readonly WebSocketServer _server;
     private string _port = "6464";
-    private string _allowedOrigin = "https://example.com";
+    private string _allowedOrigin = "https://example.com,http://localhost:5173";
     private string _authToken = "";
     private bool _autoStart = true;
     private string _activityLog = "";

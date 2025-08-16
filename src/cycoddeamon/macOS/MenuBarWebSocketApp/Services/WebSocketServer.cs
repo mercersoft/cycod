@@ -20,7 +20,7 @@ public class WebSocketServer
     private CancellationTokenSource? _cancellationTokenSource;
     
     public int Port { get; set; } = 6464;
-    public string AllowedOrigin { get; set; } = "https://example.com";
+    public string AllowedOrigin { get; set; } = "https://example.com,http://localhost:5173";
     public string AuthToken { get; set; } = "";
     public bool IsRunning { get; private set; }
     public int ActiveConnections => _connections.Count(c => c.Value.IsAuthenticated);
@@ -259,6 +259,14 @@ public class WebSocketServer
                         content = content
                     });
                     LogActivity($"Echo: {content}");
+                    break;
+                    
+                case "version":
+                    await SendMessage(connection, new
+                    {
+                        type = "version",
+                        version = "CycoDev Deamon 1.0.0"
+                    });
                     break;
             }
         }
