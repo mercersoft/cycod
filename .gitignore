@@ -17,6 +17,12 @@ src/cycodblazor/bin/
 src/cycodlib/obj/
 src/cycodlib/bin/
 
+src/cycoddeamon/macOS/MenuBarWebSocketApp/bin/
+src/cycoddeamon/macOS/MenuBarWebSocketApp/obj/
+
+# Mac OS files
+.DS_Store
+
 .blazor-publish/
 
 tests/**/bin/
