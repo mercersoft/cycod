@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using MenuBarWebSocketApp.Services;
 using MenuBarWebSocketApp.Views;
 using System;
@@ -64,7 +65,10 @@ public partial class App : Application
             
             // Subscribe to activity events to update icon when connections change
             _webSocketServer.OnActivityLogged += (message) => {
-                UpdateTrayIcon(_webSocketServer.IsRunning, _webSocketServer.ActiveConnections);
+                // Dispatch UI updates to the main thread
+                Dispatcher.UIThread.InvokeAsync(() => {
+                    UpdateTrayIcon(_webSocketServer.IsRunning, _webSocketServer.ActiveConnections);
+                });
             };
             
             UpdateTrayIcon(true, 0);
