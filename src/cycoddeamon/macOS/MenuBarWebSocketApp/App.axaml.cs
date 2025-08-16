@@ -61,22 +61,49 @@ public partial class App : Application
         try
         {
             await _webSocketServer!.StartAsync();
-            UpdateTrayIcon(true);
+            
+            // Subscribe to activity events to update icon when connections change
+            _webSocketServer.OnActivityLogged += (message) => {
+                UpdateTrayIcon(_webSocketServer.IsRunning, _webSocketServer.ActiveConnections);
+            };
+            
+            UpdateTrayIcon(true, 0);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to start WebSocket server: {ex.Message}");
-            UpdateTrayIcon(false);
+            UpdateTrayIcon(false, 0);
         }
     }
 
-    private void UpdateTrayIcon(bool isRunning)
+    private void UpdateTrayIcon(bool isRunning, int activeConnections = 0)
     {
         if (_trayIcon != null)
         {
-            _trayIcon.ToolTipText = isRunning 
-                ? $"WebSocket Server (Running on ws://localhost:{_webSocketServer?.Port ?? 6464})" 
-                : "WebSocket Server (Stopped)";
+            // Update icon based on connection state
+            string iconPath = activeConnections > 0 
+                ? "avares://MenuBarWebSocketApp/Assets/icon-connected.png"
+                : isRunning 
+                    ? "avares://MenuBarWebSocketApp/Assets/icon-running.png"
+                    : "avares://MenuBarWebSocketApp/Assets/icon.png";
+                    
+            _trayIcon.Icon = new WindowIcon(AssetLoader.Open(new Uri(iconPath)));
+            
+            // Update tooltip with enhanced information
+            if (isRunning)
+            {
+                _trayIcon.ToolTipText = activeConnections > 0
+                    ? $"🟢 WebSocket Server - {activeConnections} active connection{(activeConnections == 1 ? "" : "s")}\n" +
+                      $"Port: {_webSocketServer?.Port ?? 6464}\n" +
+                      $"Status: Connected"
+                    : $"🟡 WebSocket Server - Running\n" +
+                      $"Port: {_webSocketServer?.Port ?? 6464}\n" +
+                      $"Status: Waiting for connections";
+            }
+            else
+            {
+                _trayIcon.ToolTipText = "🔴 WebSocket Server - Stopped";
+            }
         }
     }
 
