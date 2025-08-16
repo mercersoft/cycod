@@ -27,6 +27,7 @@ public class WebSocketServer
     private readonly Dictionary<string, WebSocketConnection> _connections = new();
     private readonly object _lock = new();
     private CancellationTokenSource? _cancellationTokenSource;
+    private readonly CommandExecutionService _commandExecutionService = new();
     
     public int Port { get; set; } = 6464;
     public string AllowedOrigin { get; set; } = "https://example.com,http://localhost:5173";
@@ -92,6 +93,10 @@ public class WebSocketServer
         
         _cancellationTokenSource?.Dispose();
         _cancellationTokenSource = null;
+        
+        // Cleanup command execution service
+        _commandExecutionService?.Dispose();
+        
         IsRunning = false;
         UpdateState();
         LogActivity("Server stopped");
@@ -317,6 +322,10 @@ public class WebSocketServer
                     LogActivity("Stop command received");
                     Console.WriteLine($"[STOP COMMAND] Response sent, connection.IsStarted = {connection.IsStarted}");
                     break;
+                    
+                case "command":
+                    await HandleCommandMessage(connection, json);
+                    break;
             }
         }
         catch (Exception ex)
@@ -326,6 +335,72 @@ public class WebSocketServer
             {
                 type = "error",
                 message = "Invalid message format"
+            });
+        }
+    }
+
+    private async Task HandleCommandMessage(WebSocketConnection connection, JsonElement json)
+    {
+        try
+        {
+            // Extract command details
+            var command = json.GetProperty("command").GetString() ?? "";
+            var requestId = json.GetProperty("requestId").GetString() ?? "";
+            
+            // Extract args array
+            var argsProperty = json.GetProperty("args");
+            var args = new List<string>();
+            
+            if (argsProperty.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var arg in argsProperty.EnumerateArray())
+                {
+                    if (arg.ValueKind == JsonValueKind.String)
+                    {
+                        args.Add(arg.GetString() ?? "");
+                    }
+                }
+            }
+
+            Console.WriteLine($"[COMMAND] Executing: {command} {string.Join(" ", args)}");
+            LogActivity($"Executing command: {command} {string.Join(" ", args)}");
+
+            // Execute the command
+            var result = await _commandExecutionService.ExecuteCommandAsync(command, args.ToArray());
+
+            // Send the result back
+            await SendMessage(connection, new
+            {
+                type = "command-result",
+                requestId = requestId,
+                stdout = result.StandardOutput,
+                stderr = result.StandardError,
+                exitCode = result.ExitCode
+            });
+
+            Console.WriteLine($"[COMMAND] Completed with exit code: {result.ExitCode}");
+            LogActivity($"Command completed with exit code: {result.ExitCode}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[COMMAND] Error processing command: {ex.Message}");
+            LogActivity($"Command processing error: {ex.Message}");
+            
+            // Try to get requestId for error response
+            var requestId = "";
+            try
+            {
+                requestId = json.GetProperty("requestId").GetString() ?? "";
+            }
+            catch { /* ignore */ }
+
+            await SendMessage(connection, new
+            {
+                type = "command-result",
+                requestId = requestId,
+                stdout = "",
+                stderr = $"Command execution error: {ex.Message}",
+                exitCode = -1
             });
         }
     }

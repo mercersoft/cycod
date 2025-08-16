@@ -22,6 +22,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../../cycod/cycod.csproj" />
+    <ProjectReference Include="../../../cycodlib/cycodlib.csproj" />
+    <ProjectReference Include="../../../common/common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
