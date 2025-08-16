@@ -1,9 +1,7 @@
 import { useWebSocket } from "@/context/WebSocketContext"
 
 export default function DeamonStatus() {
-  const { status: state, handleButtonClick, isConnected } = useWebSocket()
-  
-  console.log('🐛 DeamonStatus render:', { state: state.status, isConnected })
+  const { status: state, handleButtonClick } = useWebSocket()
 
   const getStatusColor = () => {
     switch (state.status) {

@@ -72,15 +72,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   isConnectedRef.current = isConnected
   statusRef.current = status
   
-  // Add debugging to track state changes
-  const contextIdRef = useRef(Math.random().toString(36).substr(2, 9))
-  const contextId = contextIdRef.current
-  console.log(`🐛 WebSocketProvider[${contextId}] render:`, { 
-    isConnected, 
-    wsExists: !!ws, 
-    wsState: ws?.readyState,
-    status: status.status 
-  })
   
   const pendingRequests = useRef<Map<string, {
     addOutput: (text: string) => void
@@ -125,7 +116,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }, 100)
   }
 
-  const initializeConnection = () => {
+  const initializeConnection = useCallback(() => {
     let localWs: WebSocket | null = null
     let timeoutId: NodeJS.Timeout | null = null
 
@@ -167,12 +158,10 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
               case 'authenticated':
                 // Authentication successful, request version
-                console.log('🐛 WebSocket authenticated, calling setIsConnected(true)')
                 localWs?.send(JSON.stringify({
                   type: 'version'
                 }))
                 setIsConnected(true)
-                console.log('🐛 setIsConnected(true) called')
                 break
 
               case 'version':
@@ -292,7 +281,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
 
     connect()
-  }
+  }, [])
 
   const handleCommandResult = (result: CommandResult) => {
     const request = pendingRequests.current.get(result.requestId)
@@ -332,20 +321,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     // Use refs to get current values (not stale closure values)
     const currentIsConnected = isConnectedRef.current
     const currentWs = wsRef.current
-    const currentStatus = statusRef.current
-    
-    // Add extensive debugging
-    console.log(`🐛 executeCommand[${contextId}] called:`, {
-      command,
-      stateIsConnected: isConnected,
-      refIsConnected: currentIsConnected,
-      stateWs: !!ws,
-      refWs: !!currentWs,
-      wsState: currentWs?.readyState,
-      statusState: currentStatus
-    })
-    
-    // addOutput(`🐛 DEBUG: refIsConnected=${currentIsConnected}, refWs=${!!currentWs}, wsState=${currentWs?.readyState}, status=${currentStatus.status}`)
     
     if (!currentIsConnected || !currentWs) {
       addOutput('Error: Not connected to daemon')
@@ -378,7 +353,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
 
     // Generate unique request ID
-    const requestId = Date.now().toString() + Math.random().toString(36).substr(2, 9)
+    const requestId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
     
     // Store the request callbacks
     pendingRequests.current.set(requestId, { addOutput, endOutput })
@@ -401,12 +376,12 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       addOutput('Error: Failed to send command to daemon')
       setTimeout(endOutput, 100)
     }
-  }, [contextId]) // Only depend on contextId since we use refs for state
+  }, []) // Use refs for state to avoid stale closures
 
   // Auto-connect on mount
   useEffect(() => {
     initializeConnection()
-  }, [])
+  }, [initializeConnection])
 
   const contextValue: WebSocketContextType = {
     status,
