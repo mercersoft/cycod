@@ -1,0 +1,130 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:MenuBarWebSocketApp.ViewModels"
+        mc:Ignorable="d"
+        x:Class="MenuBarWebSocketApp.Views.PopupWindow"
+        x:DataType="vm:PopupViewModel"
+        Title="WebSocket Server Configuration"
+        Width="450" Height="350"
+        CanResize="False"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        WindowStartupLocation="Manual">
+    
+    <Border CornerRadius="10" 
+            Background="{DynamicResource SystemRegionBrush}"
+            BoxShadow="0 2 10 0 #40000000"
+            Margin="10">
+        
+        <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+            <!-- Header -->
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
+                <TextBlock Text="WebSocket Server Configuration" 
+                          FontSize="18" 
+                          FontWeight="Bold"
+                          VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" 
+                          Text="{Binding StatusText}"
+                          Foreground="{Binding StatusColor}"
+                          VerticalAlignment="Center"
+                          FontWeight="SemiBold"/>
+            </Grid>
+            
+            <!-- Content Area -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="15">
+                    <!-- Server Info -->
+                    <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" 
+                           CornerRadius="5"
+                           Padding="10">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Server Information" FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Status:" Margin="0,0,0,5"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ServerStatus}" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="URL:" Margin="0,0,0,5"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ServerUrl}" FontFamily="Courier New" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Active Connections:"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ActiveConnections}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Configuration Section -->
+                    <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" 
+                           CornerRadius="5"
+                           Padding="10">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Configuration" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            
+                            <!-- Port Configuration (First) -->
+                            <Grid ColumnDefinitions="120,*">
+                                <TextBlock Grid.Column="0" Text="Port:" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" 
+                                        Text="{Binding Port}" 
+                                        Watermark="6464"
+                                        IsEnabled="{Binding !IsServerRunning}"/>
+                            </Grid>
+                            
+                            <!-- Allowed Origin -->
+                            <Grid ColumnDefinitions="120,*">
+                                <TextBlock Grid.Column="0" Text="Allowed Origin:" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" 
+                                        Text="{Binding AllowedOrigin}" 
+                                        Watermark="https://example.com"/>
+                            </Grid>
+                            
+                            <!-- Authentication Token -->
+                            <Grid ColumnDefinitions="120,*">
+                                <TextBlock Grid.Column="0" Text="Auth Token:" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" 
+                                        Text="{Binding AuthToken}" 
+                                        PasswordChar="•"
+                                        Watermark="Shared secret token"/>
+                            </Grid>
+                            
+                            <!-- Auto-start Option -->
+                            <CheckBox Content="Start server automatically on launch" 
+                                     IsChecked="{Binding AutoStart}"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Connection Log -->
+                    <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" 
+                           CornerRadius="5"
+                           Padding="10">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Recent Activity" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding ActivityLog}" 
+                                    IsReadOnly="True"
+                                    Height="60"
+                                    TextWrapping="Wrap"
+                                    FontFamily="Courier New"
+                                    FontSize="11"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+            
+            <!-- Button Bar -->
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,20,0,0">
+                <Button Grid.Column="1" 
+                       Content="OK" 
+                       Command="{Binding SaveCommand}"
+                       Width="80"
+                       Margin="0,0,10,0"
+                       HotKey="Enter"/>
+                <Button Grid.Column="2" 
+                       Content="Cancel" 
+                       Command="{Binding CancelCommand}"
+                       Width="80"
+                       HotKey="Escape"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
