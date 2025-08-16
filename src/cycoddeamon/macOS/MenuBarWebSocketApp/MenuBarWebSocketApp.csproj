@@ -31,4 +31,8 @@
     </Compile>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../cycod/cycod.csproj" />
+  </ItemGroup>
+
 </Project>
