@@ -272,9 +272,28 @@ public class CommandExecutionService
                 case "get":
                     return ProcessConfigGetCommand(args, output);
 
+                case "set":
+                    return ProcessConfigSetCommand(args, output);
+
+                case "clear":
+                    return ProcessConfigClearCommand(args, output);
+
+                case "add":
+                    return ProcessConfigAddCommand(args, output);
+
+                case "remove":
+                    return ProcessConfigRemoveCommand(args, output);
+
                 default:
                     output.WriteLine($"Config subcommand '{subcommand}' not supported in direct mode");
-                    output.WriteLine("Supported commands: list, get");
+                    output.WriteLine("Supported commands:");
+                    output.WriteLine("  list [--scope]  - List configuration settings");
+                    output.WriteLine("  get <key> [--scope] - Get a configuration value");
+                    output.WriteLine("  set <key> <value> [--scope] - Set a configuration value");
+                    output.WriteLine("  clear <key> [--scope] - Clear a configuration setting");
+                    output.WriteLine("  add <key> <value> [--scope] - Add value to list setting");
+                    output.WriteLine("  remove <key> <value> [--scope] - Remove value from list setting");
+                    output.WriteLine("Scope options: --global, --user, --local, --any");
                     return Task.FromResult(1);
             }
         }
@@ -290,43 +309,57 @@ public class CommandExecutionService
         try
         {
             var configStore = ConfigStore.Instance;
-
-            // Display config settings in the same order as cycod config list
             
-            // Global scope
-            var globalLocation = ConfigFileHelpers.GetLocationDisplayName(ConfigFileScope.Global) ?? "Global";
-            var globalValues = configStore.ListValuesFromKnownScope(ConfigFileScope.Global);
-            DisplayConfigSettings(output, globalLocation, globalValues);
-            output.WriteLine();
+            // Parse scope from remaining arguments
+            var scope = ParseScopeFromArgs(args, 2, ConfigFileScope.Any); // Default to Any for list
 
-            // User scope  
-            var userLocation = ConfigFileHelpers.GetLocationDisplayName(ConfigFileScope.User) ?? "User";
-            var userValues = configStore.ListValuesFromKnownScope(ConfigFileScope.User);
-            DisplayConfigSettings(output, userLocation, userValues);
-            output.WriteLine();
-
-            // Local scope
-            var localLocation = ConfigFileHelpers.GetLocationDisplayName(ConfigFileScope.Local) ?? "Local";
-            var localValues = configStore.ListValuesFromKnownScope(ConfigFileScope.Local);
-            DisplayConfigSettings(output, localLocation, localValues);
-            output.WriteLine();
-
-            // FileName scope (custom config files)
-            var fileNameToConfigValues = configStore.ListFileNameScopeValues();
-            foreach (var kvp in fileNameToConfigValues)
+            // Display config settings based on requested scope
+            if (scope == ConfigFileScope.Any)
             {
-                var location = $"{kvp.Key} (specified)";
-                DisplayConfigSettings(output, location, kvp.Value);
+                // Display all scopes in the same order as cycod config list
+                
+                // Global scope
+                var globalLocation = ConfigFileHelpers.GetLocationDisplayName(ConfigFileScope.Global) ?? "Global";
+                var globalValues = configStore.ListValuesFromKnownScope(ConfigFileScope.Global);
+                DisplayConfigSettings(output, globalLocation, globalValues);
                 output.WriteLine();
+
+                // User scope  
+                var userLocation = ConfigFileHelpers.GetLocationDisplayName(ConfigFileScope.User) ?? "User";
+                var userValues = configStore.ListValuesFromKnownScope(ConfigFileScope.User);
+                DisplayConfigSettings(output, userLocation, userValues);
+                output.WriteLine();
+
+                // Local scope
+                var localLocation = ConfigFileHelpers.GetLocationDisplayName(ConfigFileScope.Local) ?? "Local";
+                var localValues = configStore.ListValuesFromKnownScope(ConfigFileScope.Local);
+                DisplayConfigSettings(output, localLocation, localValues);
+                output.WriteLine();
+
+                // FileName scope (custom config files)
+                var fileNameToConfigValues = configStore.ListFileNameScopeValues();
+                foreach (var kvp in fileNameToConfigValues)
+                {
+                    var location = $"{kvp.Key} (specified)";
+                    DisplayConfigSettings(output, location, kvp.Value);
+                    output.WriteLine();
+                }
+
+                // Command line settings
+                var commandLineValues = configStore.ListFromCommandLineSettings();
+                if (commandLineValues.Count > 0)
+                {
+                    var location = "Command line (specified)";
+                    DisplayConfigSettings(output, location, commandLineValues);
+                    output.WriteLine();
+                }
             }
-
-            // Command line settings
-            var commandLineValues = configStore.ListFromCommandLineSettings();
-            if (commandLineValues.Count > 0)
+            else
             {
-                var location = "Command line (specified)";
-                DisplayConfigSettings(output, location, commandLineValues);
-                output.WriteLine();
+                // Display only the requested scope
+                var location = ConfigFileHelpers.GetLocationDisplayName(scope) ?? scope.ToString();
+                var values = configStore.ListValuesFromKnownScope(scope);
+                DisplayConfigSettings(output, location, values);
             }
 
             return Task.FromResult(0);
@@ -344,13 +377,27 @@ public class CommandExecutionService
         {
             if (args.Length < 3)
             {
-                output.WriteLine("Usage: config get <key>");
+                output.WriteLine("Usage: config get <key> [--scope]");
+                output.WriteLine("Scope options: --global, --user, --local, --any (default)");
+                output.WriteLine("Example: config get debug --user");
                 return Task.FromResult(1);
             }
 
             var configStore = ConfigStore.Instance;
             var key = args[2];
-            var configValue = configStore.GetFromAnyScope(key);
+            
+            // Parse scope from remaining arguments
+            var scope = ParseScopeFromArgs(args, 3, ConfigFileScope.Any); // Default to Any for get
+            
+            ConfigValue configValue;
+            if (scope == ConfigFileScope.Any)
+            {
+                configValue = configStore.GetFromAnyScope(key);
+            }
+            else
+            {
+                configValue = configStore.GetFromScope(key, scope);
+            }
 
             if (!configValue.IsNotFoundNullOrEmpty())
             {
@@ -362,13 +409,237 @@ public class CommandExecutionService
             }
             else
             {
-                output.WriteLine($"Configuration key '{key}' not found");
+                var scopeText = scope == ConfigFileScope.Any ? "any scope" : $"{scope.ToString().ToLower()} scope";
+                output.WriteLine($"Configuration key '{key}' not found in {scopeText}");
                 return Task.FromResult(1);
             }
         }
         catch (Exception ex)
         {
             output.WriteLine($"Error getting configuration value: {ex.Message}");
+            return Task.FromResult(1);
+        }
+    }
+
+    private Task<int> ProcessConfigSetCommand(string[] args, StringWriter output)
+    {
+        try
+        {
+            if (args.Length < 4)
+            {
+                output.WriteLine("Usage: config set <key> <value> [--scope]");
+                output.WriteLine("Scope options: --global, --user, --local (default)");
+                output.WriteLine("Examples:");
+                output.WriteLine("  config set debug true");
+                output.WriteLine("  config set mylist [item1,item2,item3]");
+                output.WriteLine("  config set api_key secret123 --user");
+                return Task.FromResult(1);
+            }
+
+            var configStore = ConfigStore.Instance;
+            var key = args[2];
+            var value = args[3];
+            
+            // Parse scope from remaining arguments
+            var scope = ParseScopeFromArgs(args, 4, ConfigFileScope.Local); // Default to Local for set
+
+            // Try to parse as a list if the value is enclosed in brackets
+            if (value.StartsWith("[") && value.EndsWith("]"))
+            {
+                var listContent = value.Substring(1, value.Length - 2);
+                var listValue = new List<string>();
+                
+                if (!string.IsNullOrWhiteSpace(listContent))
+                {
+                    var items = listContent.Split(',');
+                    foreach (var item in items)
+                    {
+                        listValue.Add(item.Trim());
+                    }
+                }
+                
+                // Set the list value
+                var success = configStore.Set(key, listValue, scope, true);
+                if (!success)
+                {
+                    output.WriteLine($"Failed to set configuration key '{key}' in {scope.ToString().ToLower()} scope");
+                    return Task.FromResult(1);
+                }
+
+                // Display the set value
+                DisplayList(output, key, listValue);
+            }
+            else
+            {
+                // Set the string value
+                var success = configStore.Set(key, value, scope, true);
+                if (!success)
+                {
+                    output.WriteLine($"Failed to set configuration key '{key}' in {scope.ToString().ToLower()} scope");
+                    return Task.FromResult(1);
+                }
+
+                // Get and display the set value with location info
+                var configValue = configStore.GetFromScope(key, scope);
+                DisplayConfigValueWithLocation(output, key, configValue);
+            }
+
+            return Task.FromResult(0);
+        }
+        catch (Exception ex)
+        {
+            output.WriteLine($"Error setting configuration value: {ex.Message}");
+            return Task.FromResult(1);
+        }
+    }
+
+    private Task<int> ProcessConfigClearCommand(string[] args, StringWriter output)
+    {
+        try
+        {
+            if (args.Length < 3)
+            {
+                output.WriteLine("Usage: config clear <key> [--scope]");
+                output.WriteLine("Scope options: --global, --user, --local (default)");
+                output.WriteLine("Examples:");
+                output.WriteLine("  config clear debug");
+                output.WriteLine("  config clear api_key --user");
+                return Task.FromResult(1);
+            }
+
+            var configStore = ConfigStore.Instance;
+            var key = args[2];
+            
+            // Parse scope from remaining arguments
+            var scope = ParseScopeFromArgs(args, 3, ConfigFileScope.Local); // Default to Local for clear
+
+            // Clear the configuration value
+            var success = configStore.Clear(key, scope, true);
+
+            if (success)
+            {
+                output.WriteLine($"{key}: (cleared)");
+            }
+            else
+            {
+                output.WriteLine($"{key}: (not found)");
+            }
+
+            return Task.FromResult(0);
+        }
+        catch (Exception ex)
+        {
+            output.WriteLine($"Error clearing configuration value: {ex.Message}");
+            return Task.FromResult(1);
+        }
+    }
+
+    private Task<int> ProcessConfigAddCommand(string[] args, StringWriter output)
+    {
+        try
+        {
+            if (args.Length < 4)
+            {
+                output.WriteLine("Usage: config add <key> <value> [--scope]");
+                output.WriteLine("Scope options: --global, --user, --local (default)");
+                output.WriteLine("Examples:");
+                output.WriteLine("  config add trusted_domains example.com");
+                output.WriteLine("  config add custom_features experimental_mode --global");
+                return Task.FromResult(1);
+            }
+
+            var configStore = ConfigStore.Instance;
+            var key = args[2];
+            var value = args[3];
+            
+            // Parse scope from remaining arguments
+            var scope = ParseScopeFromArgs(args, 4, ConfigFileScope.Local); // Default to Local for add
+
+            // Add the value to the list
+            var success = configStore.AddToList(key, value, scope, true);
+            if (!success)
+            {
+                output.WriteLine($"Failed to add value to configuration key '{key}' in {scope.ToString().ToLower()} scope");
+                return Task.FromResult(1);
+            }
+
+            // Get and display the updated list
+            var configValue = configStore.GetFromScope(key, scope);
+            var listValue = configValue.AsList();
+            
+            if (listValue.Count > 0)
+            {
+                output.WriteLine($"{key}:");
+                foreach (var item in listValue)
+                {
+                    output.WriteLine($"  - {item}");
+                }
+            }
+            else
+            {
+                output.WriteLine($"{key}: (empty list)");
+            }
+
+            return Task.FromResult(0);
+        }
+        catch (Exception ex)
+        {
+            output.WriteLine($"Error adding to configuration list: {ex.Message}");
+            return Task.FromResult(1);
+        }
+    }
+
+    private Task<int> ProcessConfigRemoveCommand(string[] args, StringWriter output)
+    {
+        try
+        {
+            if (args.Length < 4)
+            {
+                output.WriteLine("Usage: config remove <key> <value> [--scope]");
+                output.WriteLine("Scope options: --global, --user, --local (default)");
+                output.WriteLine("Examples:");
+                output.WriteLine("  config remove trusted_domains example.com");
+                output.WriteLine("  config remove custom_features experimental_mode --global");
+                return Task.FromResult(1);
+            }
+
+            var configStore = ConfigStore.Instance;
+            var key = args[2];
+            var value = args[3];
+            
+            // Parse scope from remaining arguments
+            var scope = ParseScopeFromArgs(args, 4, ConfigFileScope.Local); // Default to Local for remove
+
+            // Remove the value from the list
+            var success = configStore.RemoveFromList(key, value, scope, true);
+            if (!success)
+            {
+                output.WriteLine($"Failed to remove value from configuration key '{key}' in {scope.ToString().ToLower()} scope");
+                return Task.FromResult(1);
+            }
+
+            // Get and display the updated list
+            var configValue = configStore.GetFromScope(key, scope);
+            var listValue = configValue.AsList();
+            
+            if (listValue.Count > 0)
+            {
+                output.WriteLine($"{key}:");
+                foreach (var item in listValue)
+                {
+                    output.WriteLine($"  - {item}");
+                }
+            }
+            else
+            {
+                output.WriteLine($"{key}: (empty list)");
+            }
+
+            return Task.FromResult(0);
+        }
+        catch (Exception ex)
+        {
+            output.WriteLine($"Error removing from configuration list: {ex.Message}");
             return Task.FromResult(1);
         }
     }
@@ -450,6 +721,51 @@ public class CommandExecutionService
         {
             output.WriteLine($"{keyIndent}{key}: (empty list)");
         }
+    }
+
+    private ConfigFileScope ParseScopeFromArgs(string[] args, int startIndex, ConfigFileScope defaultScope)
+    {
+        for (int i = startIndex; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg.ToLower())
+            {
+                case "--global":
+                case "-g":
+                    return ConfigFileScope.Global;
+                case "--user":
+                case "-u":
+                    return ConfigFileScope.User;
+                case "--local":
+                case "-l":
+                    return ConfigFileScope.Local;
+                case "--any":
+                case "-a":
+                    return ConfigFileScope.Any;
+            }
+        }
+        return defaultScope;
+    }
+
+    private void DisplayConfigValueWithLocation(StringWriter output, string key, ConfigValue value)
+    {
+        // Get location display name based on the config value source
+        var location = value.Source switch
+        {
+            ConfigSource.CommandLine => "Command line (specified)",
+            ConfigSource.EnvironmentVariable => "Environment variable (specified)",
+            ConfigSource.ConfigFileName => $"{value.File?.FileName} (specified)",
+            ConfigSource.LocalConfig => $"{value.File?.FileName} (local)",
+            ConfigSource.UserConfig => $"{value.File?.FileName} (user)",
+            ConfigSource.GlobalConfig => $"{value.File?.FileName} (global)",
+            _ => "Unknown location"
+        };
+
+        // Write location header
+        output.WriteLine($"{location}:");
+
+        // Display the config value with indentation
+        DisplayConfigValue(output, key, value, 2);
     }
 
     private List<string> SortKeysWithNonDottedFirst(IEnumerable<string> keys)
