@@ -4,6 +4,7 @@ interface StatusState {
   status: 'checking' | 'connected' | 'error'
   message: string
   version?: string
+  hasServer?: boolean
 }
 
 export default function DeamonStatus() {
@@ -11,31 +12,68 @@ export default function DeamonStatus() {
     status: 'checking',
     message: 'checking ....'
   })
+  const [ws, setWs] = useState<WebSocket | null>(null)
 
-  useEffect(() => {
-    let ws: WebSocket | null = null
+  const handleButtonClick = () => {
+    if (state.status === 'connected' && ws) {
+      // Disconnect
+      ws.close()
+      setWs(null)
+      setState({
+        status: 'error',
+        message: 'Disconnected by user',
+        hasServer: true
+      })
+    } else if (state.hasServer || state.status === 'checking') {
+      // Connect/Refresh
+      connectToServer()
+    }
+  }
+
+  const connectToServer = () => {
+    setState({
+      status: 'checking',
+      message: 'checking ....'
+    })
+    
+    // Trigger a reconnection by calling the connect logic
+    if (ws) {
+      ws.close()
+      setWs(null)
+    }
+    
+    // Small delay to ensure cleanup, then reconnect
+    setTimeout(() => {
+      initializeConnection()
+    }, 100)
+  }
+
+  const initializeConnection = () => {
+    let localWs: WebSocket | null = null
     let timeoutId: NodeJS.Timeout | null = null
 
     const connect = () => {
       try {
         // Set a timeout for the connection attempt
         timeoutId = setTimeout(() => {
-          if (ws && ws.readyState === WebSocket.CONNECTING) {
-            ws.close()
+          if (localWs && localWs.readyState === WebSocket.CONNECTING) {
+            localWs.close()
             setState({
               status: 'error',
-              message: 'Connection timeout - daemon may not be running'
+              message: 'Connection timeout - daemon may not be running',
+              hasServer: false
             })
           }
         }, 5000)
 
-        ws = new WebSocket('ws://localhost:6464/ws')
+        localWs = new WebSocket('ws://localhost:6464/ws')
+        setWs(localWs)
 
-        ws.onopen = () => {
+        localWs.onopen = () => {
           console.log('WebSocket connected')
         }
 
-        ws.onmessage = (event) => {
+        localWs.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data)
             console.log('Received:', data)
@@ -43,7 +81,7 @@ export default function DeamonStatus() {
             switch (data.type) {
               case 'challenge':
                 // Authenticate with empty token (no auth required by default)
-                ws?.send(JSON.stringify({
+                localWs?.send(JSON.stringify({
                   type: 'authenticate',
                   token: ''
                 }))
@@ -51,7 +89,7 @@ export default function DeamonStatus() {
 
               case 'authenticated':
                 // Authentication successful, request version
-                ws?.send(JSON.stringify({
+                localWs?.send(JSON.stringify({
                   type: 'version'
                 }))
                 break
@@ -64,7 +102,8 @@ export default function DeamonStatus() {
                 setState({
                   status: 'connected',
                   message: data.version,
-                  version: data.version
+                  version: data.version,
+                  hasServer: true
                 })
                 break
 
@@ -87,15 +126,16 @@ export default function DeamonStatus() {
           }
         }
 
-        ws.onerror = (error) => {
+        localWs.onerror = (error) => {
           console.error('WebSocket error:', error)
           setState({
             status: 'error',
-            message: 'Connection failed - daemon may not be running'
+            message: 'Connection failed - daemon may not be running',
+            hasServer: false
           })
         }
 
-        ws.onclose = (event) => {
+        localWs.onclose = (event) => {
           console.log('WebSocket closed:', event.code, event.reason)
           if (state.status === 'checking') {
             let errorMessage = 'Connection closed - daemon may not be running'
@@ -111,7 +151,8 @@ export default function DeamonStatus() {
             
             setState({
               status: 'error',
-              message: errorMessage
+              message: errorMessage,
+              hasServer: false
             })
           }
         }
@@ -120,7 +161,8 @@ export default function DeamonStatus() {
         console.error('Failed to create WebSocket:', error)
         setState({
           status: 'error',
-          message: 'Failed to connect to daemon'
+          message: 'Failed to connect to daemon',
+          hasServer: false
         })
       }
     }
@@ -132,10 +174,14 @@ export default function DeamonStatus() {
       if (timeoutId) {
         clearTimeout(timeoutId)
       }
-      if (ws) {
-        ws.close()
+      if (localWs) {
+        localWs.close()
       }
     }
+  }
+
+  useEffect(() => {
+    initializeConnection()
   }, [])
 
   const getStatusColor = () => {
@@ -149,8 +195,37 @@ export default function DeamonStatus() {
     }
   }
 
+  const getButtonText = () => {
+    if (state.status === 'connected') {
+      return 'Disconnect'
+    } else if (state.hasServer || state.status === 'checking') {
+      return state.status === 'checking' ? 'Connecting...' : 'Connect'
+    } else {
+      return 'Refresh'
+    }
+  }
+
+  const getButtonStyle = () => {
+    const baseStyle = "px-3 py-1 text-sm rounded border transition-colors duration-200"
+    
+    if (state.status === 'connected') {
+      return `${baseStyle} border-red-500 text-red-400 hover:bg-red-500 hover:text-white`
+    } else if (state.hasServer || state.status === 'checking') {
+      return `${baseStyle} border-green-500 text-green-400 hover:bg-green-500 hover:text-white ${state.status === 'checking' ? 'opacity-50 cursor-not-allowed' : ''}`
+    } else {
+      return `${baseStyle} border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white`
+    }
+  }
+
   return (
-    <div className="flex items-center gap-2 text-white">
+    <div className="flex items-center gap-3 text-white">
+      <button
+        onClick={handleButtonClick}
+        disabled={state.status === 'checking'}
+        className={getButtonStyle()}
+      >
+        {getButtonText()}
+      </button>
       <span className="font-medium">Status:</span>
       <span className={getStatusColor()}>
         {state.message}
