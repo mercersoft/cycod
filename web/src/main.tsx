@@ -4,6 +4,7 @@ import App from './App.tsx'
 import Admin from './pages/Admin.tsx'
 import GettingStarted from './pages/GettingStarted.tsx'
 import TryItLive from './pages/TryItLive.tsx'
+import Local from './pages/Local.tsx'
 import ErrorPage from './pages/ErrorPage.tsx'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 
@@ -11,6 +12,7 @@ const router = createBrowserRouter([
   { path: '/', element: <App /> },
   { path: '/start', element: <GettingStarted /> },
   { path: '/live', element: <TryItLive /> },
+  { path: '/local', element: <Local /> },
   { path: '/admin', element: <Admin /> },
   { path: '*', element: <ErrorPage /> },
 ])
