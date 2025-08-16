@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -191,22 +193,26 @@ public class CommandExecutionService
         var stdoutContent = stdoutCapture.ToString();
         var stderrContent = stderrCapture.ToString();
         
+        // Filter out server logging messages from command output
+        var filteredStdout = FilterServerMessages(stdoutContent);
+        var filteredStderr = FilterServerMessages(stderrContent);
+        
         Console.WriteLine($"[COMMAND EXEC] Results - ExitCode: {exitCode}, TimedOut: {timedOut}");
-        Console.WriteLine($"[COMMAND EXEC] Stdout length: {stdoutContent.Length}");
-        Console.WriteLine($"[COMMAND EXEC] Stderr length: {stderrContent.Length}");
-        if (!string.IsNullOrEmpty(stdoutContent))
+        Console.WriteLine($"[COMMAND EXEC] Raw stdout length: {stdoutContent.Length}, Filtered: {filteredStdout.Length}");
+        Console.WriteLine($"[COMMAND EXEC] Raw stderr length: {stderrContent.Length}, Filtered: {filteredStderr.Length}");
+        if (!string.IsNullOrEmpty(filteredStdout))
         {
-            Console.WriteLine($"[COMMAND EXEC] Stdout content: {stdoutContent}");
+            Console.WriteLine($"[COMMAND EXEC] Filtered stdout: {filteredStdout}");
         }
-        if (!string.IsNullOrEmpty(stderrContent))
+        if (!string.IsNullOrEmpty(filteredStderr))
         {
-            Console.WriteLine($"[COMMAND EXEC] Stderr content: {stderrContent}");
+            Console.WriteLine($"[COMMAND EXEC] Filtered stderr: {filteredStderr}");
         }
 
         var result = new CommandResult
         {
-            StandardOutput = stdoutContent,
-            StandardError = stderrContent,
+            StandardOutput = filteredStdout,
+            StandardError = filteredStderr,
             ExitCode = exitCode,
             TimedOut = timedOut,
             Exception = exception
@@ -228,21 +234,31 @@ public class CommandExecutionService
         return result;
     }
 
+    private string FilterServerMessages(string output)
+    {
+        if (string.IsNullOrEmpty(output))
+            return output;
+
+        var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var filteredLines = lines.Where(line => 
+            !line.Contains("[COMMAND EXEC]") &&
+            !line.Contains("[ICON UPDATE]") &&
+            !line.Contains("[TOOLTIP]") &&
+            !line.Trim().StartsWith("🐛") &&
+            !string.IsNullOrWhiteSpace(line)
+        ).ToArray();
+
+        return string.Join('\n', filteredLines);
+    }
+
     private Task<int> ProcessConfigCommandDirectly(string[] args, StringWriter output)
     {
         try
         {
-            // Simple direct implementation for config commands
+            // Real implementation using ConfigStore like cycod does
             if (args.Length < 2 || args[0] != "config")
             {
                 output.WriteLine("Only config commands are supported in direct mode");
-                return Task.FromResult(1);
-            }
-
-            var configProvider = _serviceProvider.GetService<Cycodlib.Abstractions.IConfigurationProvider>();
-            if (configProvider == null)
-            {
-                output.WriteLine("Configuration provider not available");
                 return Task.FromResult(1);
             }
 
@@ -251,29 +267,10 @@ public class CommandExecutionService
             switch (subcommand)
             {
                 case "list":
-                    // Simple config list implementation
-                    output.WriteLine("LOCATION: (direct mode - limited functionality)");
-                    output.WriteLine("  Direct mode config access - limited functionality");
-                    output.WriteLine("  Use full cycod installation for complete config management");
-                    return Task.FromResult(0);
+                    return ProcessConfigListCommand(args, output);
 
                 case "get":
-                    if (args.Length < 3)
-                    {
-                        output.WriteLine("Usage: config get <key>");
-                        return Task.FromResult(1);
-                    }
-                    var value = configProvider.GetConfigValue(args[2]);
-                    if (value != null)
-                    {
-                        output.WriteLine($"{args[2]}: {value}");
-                        return Task.FromResult(0);
-                    }
-                    else
-                    {
-                        output.WriteLine($"Configuration key '{args[2]}' not found");
-                        return Task.FromResult(1);
-                    }
+                    return ProcessConfigGetCommand(args, output);
 
                 default:
                     output.WriteLine($"Config subcommand '{subcommand}' not supported in direct mode");
@@ -286,6 +283,203 @@ public class CommandExecutionService
             output.WriteLine($"Error in direct config processing: {ex.Message}");
             return Task.FromResult(1);
         }
+    }
+
+    private Task<int> ProcessConfigListCommand(string[] args, StringWriter output)
+    {
+        try
+        {
+            var configStore = ConfigStore.Instance;
+
+            // Display config settings in the same order as cycod config list
+            
+            // Global scope
+            var globalLocation = ConfigFileHelpers.GetLocationDisplayName(ConfigFileScope.Global) ?? "Global";
+            var globalValues = configStore.ListValuesFromKnownScope(ConfigFileScope.Global);
+            DisplayConfigSettings(output, globalLocation, globalValues);
+            output.WriteLine();
+
+            // User scope  
+            var userLocation = ConfigFileHelpers.GetLocationDisplayName(ConfigFileScope.User) ?? "User";
+            var userValues = configStore.ListValuesFromKnownScope(ConfigFileScope.User);
+            DisplayConfigSettings(output, userLocation, userValues);
+            output.WriteLine();
+
+            // Local scope
+            var localLocation = ConfigFileHelpers.GetLocationDisplayName(ConfigFileScope.Local) ?? "Local";
+            var localValues = configStore.ListValuesFromKnownScope(ConfigFileScope.Local);
+            DisplayConfigSettings(output, localLocation, localValues);
+            output.WriteLine();
+
+            // FileName scope (custom config files)
+            var fileNameToConfigValues = configStore.ListFileNameScopeValues();
+            foreach (var kvp in fileNameToConfigValues)
+            {
+                var location = $"{kvp.Key} (specified)";
+                DisplayConfigSettings(output, location, kvp.Value);
+                output.WriteLine();
+            }
+
+            // Command line settings
+            var commandLineValues = configStore.ListFromCommandLineSettings();
+            if (commandLineValues.Count > 0)
+            {
+                var location = "Command line (specified)";
+                DisplayConfigSettings(output, location, commandLineValues);
+                output.WriteLine();
+            }
+
+            return Task.FromResult(0);
+        }
+        catch (Exception ex)
+        {
+            output.WriteLine($"Error listing configuration: {ex.Message}");
+            return Task.FromResult(1);
+        }
+    }
+
+    private Task<int> ProcessConfigGetCommand(string[] args, StringWriter output)
+    {
+        try
+        {
+            if (args.Length < 3)
+            {
+                output.WriteLine("Usage: config get <key>");
+                return Task.FromResult(1);
+            }
+
+            var configStore = ConfigStore.Instance;
+            var key = args[2];
+            var configValue = configStore.GetFromAnyScope(key);
+
+            if (!configValue.IsNotFoundNullOrEmpty())
+            {
+                var displayValue = configValue.IsSecret
+                    ? configValue.AsObfuscated() ?? "(empty)"
+                    : configValue.Value?.ToString() ?? "(null)";
+                output.WriteLine($"{key}: {displayValue}");
+                return Task.FromResult(0);
+            }
+            else
+            {
+                output.WriteLine($"Configuration key '{key}' not found");
+                return Task.FromResult(1);
+            }
+        }
+        catch (Exception ex)
+        {
+            output.WriteLine($"Error getting configuration value: {ex.Message}");
+            return Task.FromResult(1);
+        }
+    }
+
+    private void DisplayConfigSettings(StringWriter output, string location, Dictionary<string, ConfigValue> config, int indentLevel = 2)
+    {
+        // Write location header
+        output.WriteLine($"{location}:");
+
+        if (config.Count == 0)
+        {
+            output.WriteLine($"{new string(' ', indentLevel)}No configuration settings found.");
+            return;
+        }
+
+        // Sort the keys with non-dotted keys first, then dotted keys (same as ConfigDisplayHelpers)
+        var sortedKeys = SortKeysWithNonDottedFirst(config.Keys);
+        
+        bool hasDisplayedNonDotted = false;
+        bool hasDisplayedDotted = false;
+
+        foreach (var key in sortedKeys)
+        {
+            // If we're switching from non-dotted to dotted keys, add a line break
+            if (!hasDisplayedDotted && key.Contains('.'))
+            {
+                if (hasDisplayedNonDotted)
+                {
+                    output.WriteLine();
+                }
+                hasDisplayedDotted = true;
+            }
+            
+            if (!key.Contains('.'))
+            {
+                hasDisplayedNonDotted = true;
+            }
+            
+            DisplayConfigValue(output, key, config[key], indentLevel);
+        }
+    }
+
+    private void DisplayConfigValue(StringWriter output, string key, ConfigValue value, int indentLevel = 2)
+    {
+        var indent = new string(' ', indentLevel);
+        
+        // If it's a list type in memory (actual List objects)
+        if (value.Value is List<object> || value.Value is List<string>)
+        {
+            var list = value.AsList();
+            DisplayList(output, key, list, indentLevel);
+            return;
+        }
+        
+        // Get value to display, obfuscating if it's a secret
+        var displayValue = value.IsSecret
+            ? value.AsObfuscated() ?? "(empty)"
+            : !value.IsNotFoundNullOrEmpty()
+                ? value.Value?.ToString() ?? "(null)"
+                : "(not found or empty)";
+                            
+        output.WriteLine($"{indent}{key}: {displayValue}");
+    }
+
+    private void DisplayList(StringWriter output, string key, List<string> list, int indentLevel = 2)
+    {
+        var keyIndent = new string(' ', indentLevel);
+        var valueIndent = new string(' ', indentLevel + 2);
+        
+        if (list.Count > 0)
+        {
+            output.WriteLine($"{keyIndent}{key}:");
+            foreach (var item in list)
+            {
+                output.WriteLine($"{valueIndent}- {item}");
+            }
+        }
+        else
+        {
+            output.WriteLine($"{keyIndent}{key}: (empty list)");
+        }
+    }
+
+    private List<string> SortKeysWithNonDottedFirst(IEnumerable<string> keys)
+    {
+        // Split keys into two groups: non-dotted and dotted
+        var nonDottedKeys = new List<string>();
+        var dottedKeys = new List<string>();
+        
+        foreach (var key in keys)
+        {
+            if (key.Contains('.'))
+            {
+                dottedKeys.Add(key);
+            }
+            else
+            {
+                nonDottedKeys.Add(key);
+            }
+        }
+        
+        // Sort each group alphabetically
+        nonDottedKeys.Sort(StringComparer.OrdinalIgnoreCase);
+        dottedKeys.Sort(StringComparer.OrdinalIgnoreCase);
+        
+        // Combine the groups with non-dotted keys first
+        var sortedKeys = new List<string>();
+        sortedKeys.AddRange(nonDottedKeys);
+        sortedKeys.AddRange(dottedKeys);
+        
+        return sortedKeys;
     }
 
     public void Dispose()
